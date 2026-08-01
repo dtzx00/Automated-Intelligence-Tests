@@ -36,19 +36,24 @@ ITEMS_BASE = os.environ.get("RUGU_API_BASE", "https://api-v2.rugu.io")
 ITEMS_PATH = "/api/cat/"
 
 # --- prompt --------------------------------------------------------------------------------
-# NOTE: replace PROMPT_TEMPLATE with the VERBATIM participant-facing instruction text from the
-# study materials before the production run, the way the DAT collector uses the verbatim OSF
-# baseline prompt. The wording below is a faithful paraphrase, not the instrument.
+# VERBATIM participant-facing instruction text, reassembled from the CAT frontend component
+# (Module-Federation apps/cat/src/translations/en.json, branch dev--test-environment).
+# The rules are the instrument and are not paraphrased. Only the delivery mechanics differ:
+# a human sees one pair at a time in a form, a model receives all ten and answers in one string.
+# ENGLISH ONLY (locked 2026-08-01, Dawei): the zh-Hans arm is not collected.
 PROMPT_TEMPLATE = (
-    "You will see {n} pairs of words. For each pair, write ONE single word that is related to "
-    "BOTH words in that pair.\n"
-    "1. Give only single-word English nouns.\n"
-    "2. Do not use proper nouns such as people or places.\n"
-    "3. Give one answer for every pair, in the order shown.\n"
-    "4. Return your final response as a single string with each answer separated by commas: "
-    "\"answer_1, answer_2, ..., answer_{n}\".\n"
-    "5. Do not return anything else other than the comma-separated string of answers.\n\n"
-    "{items}"
+    "Convergent Association Task\n\n"
+    "Please enter a word that is as similar as possible, in all meanings and uses to each of "
+    "the {n} word pairs.\n\n"
+    "Detailed Rules\n"
+    "- A - B: Try to be close to both words, not just one.\n"
+    "- Apple: Only single, lowercase words in English\n"
+    "- Disneyland: No proper nouns (e.g. no specific people or places)\n"
+    "- GPA: No specialized vocabulary or technical terms\n"
+    "- Computer: Do not rely on objects in your surroundings\n\n"
+    "{items}\n\n"
+    "Return your final response as a single string with each answer separated by commas: "
+    "\"answer_1, answer_2, ..., answer_{n}\". Do not return anything else."
 )
 
 def build_prompt(pairs):
@@ -417,7 +422,8 @@ def main():
     ap = argparse.ArgumentParser(description="Collect machine CAT responses (items drawn fresh per assessment).")
     ap.add_argument("--model"); ap.add_argument("--api-model"); ap.add_argument("--provider", choices=list(PROVIDERS))
     ap.add_argument("--n", type=int, default=5); ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--language", default="en", help="en | zh-Hans | zh-Hant")
+    ap.add_argument("--language", default="en", help="en only; the Chinese arms are not collected")
+    ap.add_argument("--vendor", default="", help="vendor label; defaults to the lane name")
     ap.add_argument("--region", default=""); ap.add_argument("--reasoning", default=""); ap.add_argument("--year", default="")
     ap.add_argument("--batch", default="cat_collect_2026"); ap.add_argument("--out-dir", default=str(HERE/"raw"))
     ap.add_argument("--parallel", action="store_true")
@@ -432,7 +438,8 @@ def main():
     if not (a.model and a.provider): sys.exit("need --model and --provider (or --parallel)")
     out = Path(a.out_dir) / f"topup_{a.provider}.csv"
     generate(a.model, a.api_model or a.model, a.provider, a.n, out,
-             {"region": a.region, "reasoning": a.reasoning, "year": a.year},
+             {"region": a.region, "reasoning": a.reasoning, "year": a.year,
+              "vendor": a.vendor or a.provider},
              language=a.language, dry_run=a.dry_run, batch=a.batch)
 
 if __name__ == "__main__":
