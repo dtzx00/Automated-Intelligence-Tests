@@ -30,21 +30,37 @@ term and redraws an unseeded random baseline per request, so it is not reproduci
 ## Output
 
 ONE file per provider lane: `machine_data/raw/topup_<lane>.csv`, one row per assessment,
-**65 columns** = 15 assessment/model/API + 5 per item x 10 items.
+**63 columns** = 13 assessment-level + 5 per item x 10 items.
 
 Assessment level: `record_id`, `model_name`, `api_model_requested`, `api_model_returned`,
-`provider`, `vendor`, `endpoint_base`, `language`, `temperature`, `max_tokens`,
-`assessment_start_utc`, `assessment_duration_ms`, `raw_responses`, `reasoning`, `cat_score`.
+`provider`, `vendor`, `prompt_version`, `temperature`, `max_tokens`, `assessment_start_utc`,
+`assessment_duration_ms`, `raw_responses`, `reasoning`.
 
 Per item i in 0..9: `cue_i_left`, `cue_i_right`, `word_i`, `item_i_request_utc`,
 `item_i_response_utc`. Per-item latency is the difference of the two timestamps.
 
-`raw_responses` and `reasoning` each hold ten values as a JSON list, in item order. They are the
-only packed columns: a column per item for either would add twenty columns of long text, and
-reasoning traces run to tens of thousands of characters (DeepSeek-V4-Flash returned 24,805 for a
-single pair). `reasoning` is a list of empty strings for non-reasoning models. Read with
-`json.loads(row["reasoning"])[i]`.
+Notes on specific columns:
 
+- **Three model-id columns, all load-bearing.** `model_name` is our label, `api_model_requested`
+  is what we sent, `api_model_returned` is what actually answered. Aliases repoint silently —
+  `DeepSeek-R1` no longer resolves at all — so only the returned id records which snapshot
+  produced the words.
+- **`vendor` vs `provider`.** `provider` is the API lane that served the call; `vendor` is who
+  made the model. Identical on 51 of 55 routed models and different on the four that matter:
+  `MiniMax-M2.5`, `MiniMax-M2.7`, `MiniMax-M3` and `Hunyuan-Hy3` are all served through Tencent's
+  gateway.
+- **`prompt_version`** records which instruction wording the row saw. Bump `PROMPT_VERSION` in
+  `data_collection.py` whenever `ITEM_PROMPT_TEMPLATE` changes; the rules are the instrument, so a
+  wording change is a measure change.
+- **`temperature`** is the value actually used, after any provider-forced fallback.
+- **`raw_responses` and `reasoning`** each hold ten values as a JSON list, in item order — the
+  only packed columns. A column per item for either would add twenty columns of long text, and
+  traces are large (DeepSeek-V4-Flash returned 24,805 characters for one pair). `reasoning` is a
+  list of empty strings for non-reasoning models. Read with `json.loads(row["reasoning"])[i]`.
+
+Deliberately absent: `endpoint_base` (1:1 with `provider`, mapped in code — see the lane table
+below), `language` (constant `en`), `cat_score` and per-item scores (raw files stay immutable;
+scoring writes its own file keyed on `record_id`), per-call response ids and token counts.
 Model metadata (region, intelligence class, release date) is NOT duplicated into rows;
 `machine_data/models.csv` is the single registry and joins on `model_name`.
 

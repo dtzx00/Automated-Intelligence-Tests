@@ -24,9 +24,10 @@ ITEMS ARE DRAWN FRESH PER ASSESSMENT from GET /api/cat/?language=en, which retur
 sample of the item pool — mirroring the per-participant randomisation. The drawn pairs are
 stored in the row, so every row is self-describing.
 
-NO SCORING HERE. cat_score stays blank. Scoring is a separate later pass using the audited
-proximity-only scorer; the platform's own scorer is not used (it blends an uninformative
-uniqueness term and redraws an unseeded random baseline per request, so it is not reproducible).
+NO SCORING HERE, AND NO SCORE COLUMN. Raw collection files stay immutable; scoring is a separate
+pass that writes its own file keyed on record_id, using the audited proximity-only scorer. The
+platform's own scorer is not used (it blends an uninformative uniqueness term and redraws an
+unseeded random baseline per request, so it is not reproducible).
 
 Keys are read from env at runtime; never hard-coded, never written to disk.
 
@@ -66,7 +67,9 @@ ITEM_PROMPT_TEMPLATE = (
     "{left} / {right}\n\n"
     "Return only that single word. Do not return anything else."
 )
-PROMPT_TEMPLATE_SHA256 = hashlib.sha256(ITEM_PROMPT_TEMPLATE.encode()).hexdigest()
+# Bump this whenever ITEM_PROMPT_TEMPLATE changes. The rules ARE the instrument, so a wording
+# change is a measure change and every row must say which wording it saw.
+PROMPT_VERSION = "v1"
 
 def build_item_prompt(left, right):
     return ITEM_PROMPT_TEMPLATE.format(left=left, right=right)
@@ -80,20 +83,21 @@ def provider_midpoint(provider):
     return (lo + hi) / 2
 
 # --- schema --------------------------------------------------------------------------------
-# ONE file. 15 assessment-level columns + 5 per item x 10 items = 65 columns.
+# ONE file. 13 assessment-level columns + 5 per item x 10 items = 63 columns.
 # Every field gets its own column; nothing is packed two-to-a-cell.
 # Two columns hold ten values each, as JSON lists, because a per-item column for either would
 # add 20 columns of long text: raw_responses (verbatim model output per call, in item order,
 # with "[ERROR: ...]" where a call failed) and reasoning (the trace per call, empty for
 # non-reasoning models). Everything else is one value per column.
+# Deliberately absent: endpoint_base (1:1 with provider, mapped in code), language (constant en),
+# cat_score (raw files stay immutable; scoring writes its own file keyed on record_id).
 # Model metadata (region, intelligence class, release date) is NOT duplicated here;
 # machine_data/models.csv is the single registry and joins on model_name.
 META_FIELDS = [
     "record_id", "model_name", "api_model_requested", "api_model_returned",
-    "provider", "vendor", "endpoint_base", "language",
-    "temperature", "max_tokens",
+    "provider", "vendor", "prompt_version", "temperature", "max_tokens",
     "assessment_start_utc", "assessment_duration_ms",
-    "raw_responses", "reasoning", "cat_score",
+    "raw_responses", "reasoning",
 ]
 ITEM_FIELDS = []
 for _i in range(N_ITEMS):
@@ -277,12 +281,6 @@ def call_item(provider, key, api_model, prompt, target_temp, seed, max_retries=6
                 continue
             return None, target_temp, retries, msg[:200]
 
-ENDPOINTS = {
-    "openai": "https://api.openai.com/v1", "anthropic": "https://api.anthropic.com/v1",
-    "xai": "https://api.x.ai/v1", "deepseek": "https://api.deepseek.com/v1",
-    "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "hunyuan": "https://tokenhub.tencentmaas.com/v1", "moonshot": "https://api.moonshot.ai/v1",
-}
 
 # ---- one assessment = 10 calls --------------------------------------------------------------
 def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch, key,
@@ -323,13 +321,12 @@ def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch
     row = {
         "record_id": record_id, "model_name": model_name, "api_model_requested": api_model,
         "api_model_returned": api_model_returned, "provider": prov,
-        "vendor": meta.get("vendor", ""), "endpoint_base": ENDPOINTS.get(prov, ""),
-        "language": language, "temperature": temp_effective, "max_tokens": max_tokens,
+        "vendor": meta.get("vendor", ""), "prompt_version": PROMPT_VERSION,
+        "temperature": temp_effective, "max_tokens": max_tokens,
         "assessment_start_utc": started,
         "assessment_duration_ms": int((time.time() - t_start) * 1000),
         "raw_responses": json.dumps(raws, ensure_ascii=False),
         "reasoning": json.dumps(reasonings, ensure_ascii=False),
-        "cat_score": "",
     }
     for i in range(N_ITEMS):
         row[f"cue_{i}_left"]  = pairs[i][0] if i < len(pairs) else ""
@@ -481,8 +478,8 @@ def generate(model_name, api_model, provider, n, out_csv, meta, language="en",
         made += 1
         if dry_run:
             print(json.dumps({k: row[k] for k in (
-                "record_id","model_name","api_model_returned","provider","temperature",
-                "assessment_start_utc","assessment_duration_ms")}, ensure_ascii=False, indent=2))
+                "record_id","model_name","api_model_returned","provider","prompt_version",
+                "temperature","assessment_start_utc","assessment_duration_ms")}, ensure_ascii=False, indent=2))
             raws = json.loads(row["raw_responses"]); rsn = json.loads(row["reasoning"])
             for i in range(N_ITEMS):
                 print(f"  item {i}: {row[f'cue_{i}_left']} / {row[f'cue_{i}_right']} -> "
