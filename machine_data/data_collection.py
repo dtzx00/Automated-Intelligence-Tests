@@ -24,6 +24,7 @@ Usage:
   python data_collection.py --parallel --models machine_data/models.csv --n 500
 """
 import argparse, csv, hashlib, json, os, re as _re, subprocess, sys, time, threading, queue
+import re
 import urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -204,13 +205,32 @@ def resolve_lane(model_row):
 
 
 def parse_words(text, n=N_ITEMS):
-    """Parse the model's comma (or newline) separated answers. Returns list of n words or None."""
-    t = (text or "").replace("\n", ",")
-    parts = [p.strip().strip('".').strip() for p in t.split(",")]
-    parts = [_re.sub(r"^\s*\d+[\.\)]\s*", "", p) for p in parts]
-    parts = [p.lower() for p in parts if p and not p.isdigit()]
-    parts = [p for p in parts if p]
-    return parts[:n] if len(parts) >= n else None
+    """Extract exactly n single-word answers, or fail loudly.
+
+    Models are told to return only a comma-separated string, but some prepend their working
+    ("1. bowl / salary - both can be earned -> **prize**") even when not asked. A naive
+    comma/newline split turns that preamble into fake answers, so instead: scan lines from the
+    BOTTOM, take the first line that yields exactly n valid single-word tokens, and if no line
+    does, mark the row failed and store no words. Never guess.
+    """
+    WORD = re.compile(r"^[a-z][a-z'-]{0,29}$")
+
+    def tokens(line):
+        line = re.sub(r"[*_`]", "", line)                    # markdown emphasis
+        line = re.sub(r"^\s*(?:\d+[.)]|[-•])\s*", "", line)   # list markers
+        parts = [t.strip().strip('."\'').lower() for t in line.split(",")]
+        return [t for t in parts if t]
+
+    lines = [l for l in (text or "").splitlines() if l.strip()]
+    for line in reversed(lines):
+        toks = tokens(line)
+        if len(toks) == n and all(WORD.match(t) for t in toks):
+            return toks, "ok"
+    # last resort: the whole response as one comma-separated string
+    toks = tokens(" ".join(lines))
+    if len(toks) == n and all(WORD.match(t) for t in toks):
+        return toks, "ok"
+    return [], "failed"
 
 def call_once(provider, key, api_model, prompt, target_temp, seed):
     fn = PROVIDERS[provider][0]
