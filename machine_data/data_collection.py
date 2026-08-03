@@ -14,18 +14,15 @@ DELIVERY: ONE API CALL PER WORD PAIR (locked 2026-08-03, Dawei)
   Note the one real divergence: a human accumulates memory across the 10 items and may revise
   earlier answers with the Previous button; independent calls cannot.
 
-OUTPUT: TWO FILES per provider lane, joined on record_id
-  raw/topup_<lane>.csv        wide, analysis-ready: one row per assessment, 76 columns —
-                              26 assessment/model/API columns + 5 per item
-                              (cue left, cue right, word, request ts, response ts) x 10.
-  raw/items_topup_<lane>.csv  long, full provenance: one row per CALL (10 per assessment) with
-                              verbatim response text, reasoning trace, per-call token counts,
-                              response ids, fingerprints, retries and the prompt hash.
-  The bulky text lives in the long file so the wide file stays readable in a spreadsheet.
+OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessment, 65 columns:
+  15 assessment/model/API columns + 5 per item (cue left, cue right, word, request timestamp,
+  response timestamp) x 10 items. Every field has its own column. raw_responses and reasoning
+  each hold ten values as a JSON list, since a column per item for either would add twenty
+  columns of long text.
 
 ITEMS ARE DRAWN FRESH PER ASSESSMENT from GET /api/cat/?language=en, which returns a random
 sample of the item pool — mirroring the per-participant randomisation. The drawn pairs are
-stored in both files, so every row is self-describing.
+stored in the row, so every row is self-describing.
 
 NO SCORING HERE. cat_score stays blank. Scoring is a separate later pass using the audited
 proximity-only scorer; the platform's own scorer is not used (it blends an uninformative
@@ -81,42 +78,28 @@ PROVIDER_TEMP_RANGE = {
 def provider_midpoint(provider):
     lo, hi = PROVIDER_TEMP_RANGE.get(provider, (0, 2))
     return (lo + hi) / 2
-def temp_range_str(provider):
-    lo, hi = PROVIDER_TEMP_RANGE.get(provider, (0, 2))
-    return f"{lo}-{hi}"
 
 # --- schema --------------------------------------------------------------------------------
-# 26 assessment-level columns + 5 per item x 10 items = 76 columns.
-# Model metadata that lives in models.csv (region, intelligence class, release date) is NOT
-# duplicated here; models.csv is the single registry and joins on model_name.
+# ONE file. 15 assessment-level columns + 5 per item x 10 items = 65 columns.
+# Every field gets its own column; nothing is packed two-to-a-cell.
+# Two columns hold ten values each, as JSON lists, because a per-item column for either would
+# add 20 columns of long text: raw_responses (verbatim model output per call, in item order,
+# with "[ERROR: ...]" where a call failed) and reasoning (the trace per call, empty for
+# non-reasoning models). Everything else is one value per column.
+# Model metadata (region, intelligence class, release date) is NOT duplicated here;
+# machine_data/models.csv is the single registry and joins on model_name.
 META_FIELDS = [
     "record_id", "model_name", "api_model_requested", "api_model_returned",
-    "provider", "vendor", "endpoint_base", "batch", "language",
-    "temperature_requested", "temperature_effective", "max_tokens", "seed_base",
-    "items_source", "items_fetch_timestamp_utc",
-    "assessment_start_utc", "assessment_end_utc", "assessment_duration_ms",
-    "n_calls_ok", "n_words_parsed", "parse_status",
-    "prompt_tokens_total", "completion_tokens_total", "total_tokens_total",
-    "prompt_template_sha256", "cat_score", "collector_version",
+    "provider", "vendor", "endpoint_base", "language",
+    "temperature", "max_tokens",
+    "assessment_start_utc", "assessment_duration_ms",
+    "raw_responses", "reasoning", "cat_score",
 ]
 ITEM_FIELDS = []
 for _i in range(N_ITEMS):
     ITEM_FIELDS += [f"cue_{_i}_left", f"cue_{_i}_right", f"word_{_i}",
                     f"item_{_i}_request_utc", f"item_{_i}_response_utc"]
 FIELDS = META_FIELDS + ITEM_FIELDS
-
-# one row per CALL — verbatim text, reasoning, and per-call API provenance
-LONG_FIELDS = [
-    "record_id", "model_name", "api_model_requested", "api_model_returned", "provider",
-    "batch", "language", "item_index", "cue_left", "cue_right",
-    "request_timestamp_utc", "response_timestamp_utc", "latency_ms",
-    "temperature_requested", "temperature_effective", "seed",
-    "api_request_id", "response_id", "system_fingerprint", "finish_reason",
-    "prompt_tokens", "completion_tokens", "total_tokens",
-    "prompt_template_sha256", "prompt_sha256",
-    "raw_response_text", "reasoning_text", "word", "parse_status",
-    "http_retries", "error", "collector_version",
-]
 
 def _collector_version():
     try:
@@ -304,83 +287,49 @@ ENDPOINTS = {
 # ---- one assessment = 10 calls --------------------------------------------------------------
 def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch, key,
                    pairs=None, fetched_at=None):
-    """Fetch 10 pairs (unless supplied), call the model once per pair, and return
-    (wide_row, [10 long rows]). A failed item leaves its word blank and is flagged; the other
-    nine are still valid data, so the assessment is kept and marked partial."""
+    """Fetch 10 pairs (unless supplied), call the model once per pair, return one row.
+
+    A failed call leaves its word blank and records "[ERROR: ...]" in raw_responses for that
+    item. The other nine are still valid data, so the assessment is always kept.
+    """
     if pairs is None:
         pairs, fetched_at = fetch_items(language)
     target_temp = provider_midpoint(prov)
     started = _now(); t_start = time.time()
     record_id = _record_id(model_name, batch, started)
 
-    long_rows, words, item_ts = [], [], []
+    words, item_ts, raws, reasonings = [], [], [], []
     api_model_returned = ""; temp_effective = ""; max_tokens = ""
-    ptok = ctok = ttok = 0; n_ok = 0
 
     for i, (left, right) in enumerate(pairs):
         prompt = build_item_prompt(left, right)
         seed = seed_base * 100 + i
-        req_ts = _now(); t0 = time.time()
+        req_ts = _now()
         payload, temp_used, retries, err = call_item(prov, key, api_model, prompt, target_temp, seed)
-        resp_ts = _now(); latency = int((time.time() - t0) * 1000)
+        resp_ts = _now()
 
         if payload is None:
-            word, status, raw, reasoning = "", "failed", "", ""
+            words.append(""); raws.append(f"[ERROR: {err}]"); reasonings.append("")
         else:
-            word, status = parse_word(payload["text"])
-            raw, reasoning = payload["text"], payload.get("reasoning_text", "")
+            word, _status = parse_word(payload["text"])
+            words.append(word)
+            raws.append(payload["text"])
+            reasonings.append(payload.get("reasoning_text", ""))
             api_model_returned = api_model_returned or payload.get("api_model_returned", "")
             temp_effective = temp_used
             max_tokens = payload.get("max_tokens", "") or max_tokens
-            for k, acc in (("prompt_tokens", "p"), ("completion_tokens", "c"), ("total_tokens", "t")):
-                v = payload.get(k) or 0
-                try: v = int(v)
-                except Exception: v = 0
-                if acc == "p": ptok += v
-                elif acc == "c": ctok += v
-                else: ttok += v
-            if status == "ok": n_ok += 1
+        item_ts.append((req_ts, resp_ts))
 
-        words.append(word); item_ts.append((req_ts, resp_ts))
-        long_rows.append({
-            "record_id": record_id, "model_name": model_name, "api_model_requested": api_model,
-            "api_model_returned": (payload or {}).get("api_model_returned", ""), "provider": prov,
-            "batch": batch, "language": language, "item_index": i,
-            "cue_left": left, "cue_right": right,
-            "request_timestamp_utc": req_ts, "response_timestamp_utc": resp_ts, "latency_ms": latency,
-            "temperature_requested": target_temp, "temperature_effective": temp_used,
-            "seed": seed if PROVIDERS[prov][2] else "",
-            "api_request_id": (payload or {}).get("api_request_id", ""),
-            "response_id": (payload or {}).get("response_id", ""),
-            "system_fingerprint": (payload or {}).get("system_fingerprint", ""),
-            "finish_reason": (payload or {}).get("finish_reason", ""),
-            "prompt_tokens": (payload or {}).get("prompt_tokens", ""),
-            "completion_tokens": (payload or {}).get("completion_tokens", ""),
-            "total_tokens": (payload or {}).get("total_tokens", ""),
-            "prompt_template_sha256": PROMPT_TEMPLATE_SHA256,
-            "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
-            "raw_response_text": raw, "reasoning_text": reasoning, "word": word,
-            "parse_status": status, "http_retries": retries, "error": err,
-            "collector_version": COLLECTOR_VERSION,
-        })
-
-    ended = _now()
-    n_words = sum(1 for w in words if w)
-    parse_status = "ok" if n_words == N_ITEMS else ("failed" if n_words == 0 else "partial")
     row = {
         "record_id": record_id, "model_name": model_name, "api_model_requested": api_model,
-        "api_model_returned": api_model_returned, "provider": prov, "vendor": meta.get("vendor", ""),
-        "endpoint_base": ENDPOINTS.get(prov, ""), "batch": batch, "language": language,
-        "temperature_requested": target_temp, "temperature_effective": temp_effective,
-        "max_tokens": max_tokens, "seed_base": seed_base if PROVIDERS[prov][2] else "",
-        "items_source": f"{ITEMS_BASE}{ITEMS_PATH}?language={language}",
-        "items_fetch_timestamp_utc": fetched_at,
-        "assessment_start_utc": started, "assessment_end_utc": ended,
+        "api_model_returned": api_model_returned, "provider": prov,
+        "vendor": meta.get("vendor", ""), "endpoint_base": ENDPOINTS.get(prov, ""),
+        "language": language, "temperature": temp_effective, "max_tokens": max_tokens,
+        "assessment_start_utc": started,
         "assessment_duration_ms": int((time.time() - t_start) * 1000),
-        "n_calls_ok": n_ok, "n_words_parsed": n_words, "parse_status": parse_status,
-        "prompt_tokens_total": ptok, "completion_tokens_total": ctok, "total_tokens_total": ttok,
-        "prompt_template_sha256": PROMPT_TEMPLATE_SHA256,
-        "cat_score": "", "collector_version": COLLECTOR_VERSION,
+        "raw_responses": json.dumps(raws, ensure_ascii=False),
+        "reasoning": json.dumps(reasonings, ensure_ascii=False),
+        "cat_score": "",
     }
     for i in range(N_ITEMS):
         row[f"cue_{i}_left"]  = pairs[i][0] if i < len(pairs) else ""
@@ -388,8 +337,7 @@ def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch
         row[f"word_{i}"]      = words[i] if i < len(words) else ""
         row[f"item_{i}_request_utc"]  = item_ts[i][0] if i < len(item_ts) else ""
         row[f"item_{i}_response_utc"] = item_ts[i][1] if i < len(item_ts) else ""
-    return row, long_rows
-
+    return row
 
 # ---- io -------------------------------------------------------------------------------------
 def _append(path, fields, rows):
@@ -401,9 +349,8 @@ def _append(path, fields, rows):
         if not exists: w.writeheader()
         w.writerows(rows)
 
-def write_assessment(out_csv, long_csv, row, long_rows):
+def write_assessment(out_csv, row):
     _append(out_csv, FIELDS, [row])
-    _append(long_csv, LONG_FIELDS, long_rows)
 
 def existing_count(out_csv, model_name):
     if not out_csv.exists(): return 0
@@ -443,7 +390,7 @@ class LaunchGate:
             if delta < self.min_gap: time.sleep(self.min_gap - delta)
             self.last = time.time()
 
-def collect_one(model_row, n, out_csv, long_csv, batch, gate, key, stop, language="en"):
+def collect_one(model_row, n, out_csv, batch, gate, key, stop, language="en"):
     prov = resolve_lane(model_row); name = model_row["model"]
     api = model_row.get("api_model_id") or model_row["model"]
     meta = {"vendor": model_row.get("provider","")}
@@ -457,14 +404,15 @@ def collect_one(model_row, n, out_csv, long_csv, batch, gate, key, stop, languag
             print(f"FAIL {name} ({prov}): item fetch — {str(e)[:80]}", flush=True)
             return name, made-have, f"error:items:{str(e)[:50]}"
         gate.wait()
-        row, long_rows = run_assessment(name, api, prov, meta, language, 1000 + made, batch, key,
-                                        pairs=pairs, fetched_at=fetched_at)
-        with lk: write_assessment(out_csv, long_csv, row, long_rows)
+        row = run_assessment(name, api, prov, meta, language, 1000 + made, batch, key,
+                             pairs=pairs, fetched_at=fetched_at)
+        with lk: write_assessment(out_csv, row)
         made += 1
-        if row["n_calls_ok"] == 0:
+        if not any(row[f"word_{i}"] for i in range(N_ITEMS)):
             dead += 1
             if dead >= 3:
-                err = next((r["error"] for r in long_rows if r["error"]), "all calls failed")
+                errs = json.loads(row["raw_responses"])
+                err = next((e for e in errs if e.startswith("[ERROR")), "all calls failed")
                 print(f"FAIL {name} ({prov}): {err[:90]}", flush=True)
                 return name, made-have, f"error:{err[:60]}"
         else:
@@ -476,7 +424,6 @@ def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, langua
     if not key:
         print(f"LANE {prov}: MISSING KEY {PROVIDERS[prov][1]} — skipped", flush=True); return
     out_csv = Path(out_dir)/f"topup_{prov}.csv"
-    long_csv = Path(out_dir)/f"items_topup_{prov}.csv"
     gate = LaunchGate(min_gap)
     todo = [m for m in models if existing_count(out_csv, m["model"]) < n]
     print(f"LANE {prov}: {len(todo)}/{len(models)} models need work (concurrency={concurrency})", flush=True)
@@ -488,7 +435,7 @@ def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, langua
             try: m = q.get_nowait()
             except queue.Empty: return
             try:
-                name, got, st = collect_one(m, n, out_csv, long_csv, batch, gate, key, stop, language)
+                name, got, st = collect_one(m, n, out_csv, batch, gate, key, stop, language)
                 results.append((name, got, st))
                 print(f"  [{prov}] {name}: +{got} ({st})", flush=True)
             finally:
@@ -524,26 +471,25 @@ def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, language, 
         print("No models skipped — all attempted models collected cleanly.", flush=True)
     return results
 
-def generate(model_name, api_model, provider, n, out_csv, long_csv, meta, language="en",
+def generate(model_name, api_model, provider, n, out_csv, meta, language="en",
              dry_run=False, batch="cat_collect_2026", pace=0.1):
     key = os.environ.get(PROVIDERS[provider][1])
     if not key: sys.exit(f"Missing env key {PROVIDERS[provider][1]} for provider {provider}")
     made = 0
     while made < n:
-        row, long_rows = run_assessment(model_name, api_model, provider, meta, language,
-                                        1000 + made, batch, key)
+        row = run_assessment(model_name, api_model, provider, meta, language, 1000 + made, batch, key)
         made += 1
         if dry_run:
             print(json.dumps({k: row[k] for k in (
-                "record_id","model_name","api_model_returned","provider","temperature_effective",
-                "n_calls_ok","n_words_parsed","parse_status","total_tokens_total",
-                "assessment_duration_ms")}, ensure_ascii=False, indent=2))
-            for lr in long_rows:
-                print(f"  item {lr['item_index']}: {lr['cue_left']} / {lr['cue_right']} -> "
-                      f"{lr['word'] or '(FAILED)'}  [{lr['latency_ms']}ms, {lr['total_tokens']} tok]"
-                      f"{' ERR ' + lr['error'][:60] if lr['error'] else ''}")
+                "record_id","model_name","api_model_returned","provider","temperature",
+                "assessment_start_utc","assessment_duration_ms")}, ensure_ascii=False, indent=2))
+            raws = json.loads(row["raw_responses"]); rsn = json.loads(row["reasoning"])
+            for i in range(N_ITEMS):
+                print(f"  item {i}: {row[f'cue_{i}_left']} / {row[f'cue_{i}_right']} -> "
+                      f"{row[f'word_{i}'] or '(FAILED)'}   raw={raws[i][:40]!r}"
+                      f"{'  reasoning=' + str(len(rsn[i])) + ' chars' if rsn[i] else ''}")
             return [row]
-        write_assessment(out_csv, long_csv, row, long_rows)
+        write_assessment(out_csv, row)
         time.sleep(pace)
     print(f"[{provider}/{api_model}] wrote {made} assessments ({made*N_ITEMS} calls) -> {out_csv}")
 
@@ -566,8 +512,7 @@ def main():
                      only=set(a.only.split(",")) if a.only else None); return
     if not (a.model and a.provider): sys.exit("need --model and --provider (or --parallel)")
     out = Path(a.out_dir)/f"topup_{a.provider}.csv"
-    long_out = Path(a.out_dir)/f"items_topup_{a.provider}.csv"
-    generate(a.model, a.api_model or a.model, a.provider, a.n, out, long_out,
+    generate(a.model, a.api_model or a.model, a.provider, a.n, out,
              {"vendor": a.vendor or a.provider},
              language=a.language, dry_run=a.dry_run, batch=a.batch)
 

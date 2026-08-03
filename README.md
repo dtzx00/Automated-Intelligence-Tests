@@ -29,17 +29,21 @@ term and redraws an unseeded random baseline per request, so it is not reproduci
 
 ## Output
 
-Two files per provider lane in `machine_data/raw/`, joined on `record_id`:
+ONE file per provider lane: `machine_data/raw/topup_<lane>.csv`, one row per assessment,
+**65 columns** = 15 assessment/model/API + 5 per item x 10 items.
 
-| file | grain | columns |
-|---|---|---|
-| `topup_<lane>.csv` | one row per assessment | 77 = 27 assessment/model/API + 5 per item x 10 |
-| `items_topup_<lane>.csv` | one row per call (10 per assessment) | 32 |
+Assessment level: `record_id`, `model_name`, `api_model_requested`, `api_model_returned`,
+`provider`, `vendor`, `endpoint_base`, `language`, `temperature`, `max_tokens`,
+`assessment_start_utc`, `assessment_duration_ms`, `raw_responses`, `reasoning`, `cat_score`.
 
-Per item in the wide file: `cue_i_left`, `cue_i_right`, `word_i`, `item_i_request_utc`,
-`item_i_response_utc`. The long file carries what would bloat a spreadsheet: verbatim response
-text, reasoning trace, per-call tokens, response and request ids, fingerprint, finish reason,
-retry count, error, and the per-call prompt hash.
+Per item i in 0..9: `cue_i_left`, `cue_i_right`, `word_i`, `item_i_request_utc`,
+`item_i_response_utc`. Per-item latency is the difference of the two timestamps.
+
+`raw_responses` and `reasoning` each hold ten values as a JSON list, in item order. They are the
+only packed columns: a column per item for either would add twenty columns of long text, and
+reasoning traces run to tens of thousands of characters (DeepSeek-V4-Flash returned 24,805 for a
+single pair). `reasoning` is a list of empty strings for non-reasoning models. Read with
+`json.loads(row["reasoning"])[i]`.
 
 Model metadata (region, intelligence class, release date) is NOT duplicated into rows;
 `machine_data/models.csv` is the single registry and joins on `model_name`.
@@ -47,10 +51,10 @@ Model metadata (region, intelligence class, release date) is NOT duplicated into
 ## Parsing fails closed
 
 A call yields a word only if a line of the response reduces to one valid single word after
-stripping markdown, list markers and an `answer:`-style label. Otherwise the word is blank and
-`parse_status=failed`. A failed item does not discard the other nine: the assessment is kept and
-marked `partial`. `raw_response_text` in the long file is never modified, so every failure stays
-inspectable.
+stripping markdown, list markers and an `answer:`-style label. Otherwise `word_i` is blank. A
+failed item never discards the other nine — the assessment is always kept. `raw_responses[i]`
+holds the verbatim output, unmodified, or `[ERROR: ...]` if the call itself failed, so a blank
+word can always be diagnosed from the row alone.
 
 ## Run
 
