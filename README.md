@@ -1,68 +1,78 @@
-# convergent_networks — machine CAT collection
+# convergent_networks
 
-LLM data collection for the **Convergent Association Task (CAT)**: the machine arm of the
-convergent-creativity project. This repo collects responses only. It does **not** score them.
+Machine CAT (Convergent Association Task) collection. Companion to
+[dtzx00/creativity_networks](https://github.com/dtzx00/creativity_networks), which holds the
+machine DAT arm. Same models, same provider adapters, same temperature and reasoning policy, so
+convergent and divergent scores are comparable within model.
 
-Companion repo: [`dtzx00/creativity_networks`](https://github.com/dtzx00/creativity_networks)
-(the machine DAT / divergent arm). The collector here is adapted from that repo's
-`machine_data/data_collection.py`, so both arms are collected under identical conditions —
-same provider adapters, same temperature policy, same reasoning capture, same provenance
-columns, same resumable parallel lanes.
+## Design
 
-## Design decisions
+**One API call per word pair.** An assessment is: one fetch of 10 cue pairs from the Rugu CAT
+endpoint, then 10 independent model calls, one per pair, each in a fresh context. No pair can
+prime another. This matches the human form, where pairs are presented one at a time.
 
-**Items are drawn fresh for every assessment.** Each assessment calls the live Rugu endpoint
-`GET https://api-v2.rugu.io/api/cat/?language=en`, which returns a random sample of 10 cue
-pairs from the item pool. Six consecutive calls returned 60 distinct pairs with no repeats, so
-the pool is large. This mirrors the human procedure, where cue pairs were randomised per
-participant. The drawn pairs are written into every row (`cue_i_left`, `cue_i_right`,
-`items_json`), so each row is self-describing and no separate item key is needed.
+The one divergence from the human procedure: a participant accumulates memory across items and
+can revise earlier answers with the Previous button. Independent calls cannot.
 
-**No scoring in this repo.** `cat_score` is written blank. Scoring is a separate later pass,
-because the scoring method is still being settled. The platform's own scorer is deliberately
-not used: it blends a uniqueness term that carries no independent validity, and it redraws an
-unseeded 100-word random baseline on every request, so the same answers do not produce the
-same score twice.
+**Items are drawn fresh per assessment** from `GET /api/cat/?language=en`, which returns a
+random sample of the pool — mirroring per-participant randomisation. Every row stores its own
+pairs, so no row depends on knowing which draw it came from.
 
-**Prompt.** `PROMPT_TEMPLATE` in the collector is currently a faithful paraphrase of the task
-instructions, not the instrument. Before the production run it must be replaced with the
-verbatim participant-facing wording from the study materials, the way the DAT collector uses
-the verbatim OSF baseline prompt. The template hash and the per-assessment prompt hash are both
-recorded on every row so any change is detectable after the fact.
+**Instructions are the instrument, verbatim** from the CAT frontend
+(`Module-Federation apps/cat/src/translations/en.json`). Two mechanical edits, both forced by
+single-item delivery: "each of the 10 word pairs" -> "the following word pair", and the output
+line asks for one word instead of ten. English only.
 
-**Reasoning and thinking effort.** Every row stores whatever reasoning trace the API returns
-(`reasoning_text`), and no model is ever sent a reasoning-effort or thinking-budget override —
-every model runs at its shipped default. Reasoning tokens are billed either way, so capturing
-the trace is free.
+**No scoring here.** `cat_score` stays blank; scoring is a later pass with the audited
+proximity-only scorer. The platform scorer is not used: it blends an uninformative uniqueness
+term and redraws an unseeded random baseline per request, so it is not reproducible.
 
-## Usage
+## Output
+
+Two files per provider lane in `machine_data/raw/`, joined on `record_id`:
+
+| file | grain | columns |
+|---|---|---|
+| `topup_<lane>.csv` | one row per assessment | 77 = 27 assessment/model/API + 5 per item x 10 |
+| `items_topup_<lane>.csv` | one row per call (10 per assessment) | 32 |
+
+Per item in the wide file: `cue_i_left`, `cue_i_right`, `word_i`, `item_i_request_utc`,
+`item_i_response_utc`. The long file carries what would bloat a spreadsheet: verbatim response
+text, reasoning trace, per-call tokens, response and request ids, fingerprint, finish reason,
+retry count, error, and the per-call prompt hash.
+
+Model metadata (region, intelligence class, release date) is NOT duplicated into rows;
+`machine_data/models.csv` is the single registry and joins on `model_name`.
+
+## Parsing fails closed
+
+A call yields a word only if a line of the response reduces to one valid single word after
+stripping markdown, list markers and an `answer:`-style label. Otherwise the word is blank and
+`parse_status=failed`. A failed item does not discard the other nine: the assessment is kept and
+marked `partial`. `raw_response_text` in the long file is never modified, so every failure stays
+inspectable.
+
+## Run
 
 ```bash
 # one assessment, printed, nothing written
-python machine_data/data_collection.py \
-  --model "GPT-4.1-mini" --api-model gpt-4.1-mini --provider openai --n 1 --dry-run
+python machine_data/data_collection.py --model "GPT-4.1-mini" --api-model gpt-4.1-mini \
+  --provider openai --n 1 --dry-run
 
-# full run: one lane per provider, resumable, per-row flush
+# full run: n assessments per model, all lanes in parallel, resumable
 python machine_data/data_collection.py --parallel --models machine_data/models.csv --n 500
 ```
 
-Provider keys are read from the environment at runtime (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
-`XAI_API_KEY`, `DEEPSEEK_API_KEY`, `QWEN_API_KEY`, `HUNYUAN_API_KEY`, `MOONSHOT_API_KEY`) and are
-never written to disk. Output goes to `machine_data/raw/topup_<provider>.csv`, one row per
-assessment, flushed per row so an interrupted run loses nothing and resumes where it stopped.
+`--n` counts assessments; each is 10 calls. Runs are resumable per model: existing rows in the
+lane file are counted and only the shortfall is collected. Rows are flushed per assessment, so an
+interrupted run loses nothing.
 
-`machine_data/models.csv` is copied from `creativity_networks` so the model line-up matches the
-DAT run exactly — that is what makes a per-model convergent-vs-divergent comparison possible.
+## Provider lanes
 
-## Row layout
+`models.csv` `provider` is the vendor, which is not always the API serving the model: Tencent and
+MiniMax models were served through the Tencent MaaS gateway (`hunyuan` lane) in the DAT run.
+`LANE_BY_VENDOR` maps vendor to lane; a `lane` column in `models.csv` overrides per model. Models
+with no resolvable lane are printed as UNROUTED and not silently skipped — currently
+`Llama-2-70b`, `Llama4-Maverick`, `Llama4-Scout` (meta) and `Ernie-4.0-8k` (baidu).
 
-One row = one assessment = one API call = 10 items.
-
-| group | columns |
-|---|---|
-| identity | `model_name`, `api_model_requested`, `api_model_returned`, `provider`, `endpoint_base`, `batch`, `region`, `reasoning`, `model_year` |
-| condition | `language`, `temperature_requested`, `temperature_effective`, `temp_range_used`, `seed` |
-| items | `items_source`, `items_fetch_timestamp_utc`, `items_json`, `cue_0_left` … `cue_9_right` |
-| response | `raw_response_text`, `reasoning_text`, `word_0` … `word_9`, `parse_status`, `n_words_parsed` |
-| provenance | timestamps, `latency_ms`, `api_request_id`, `response_id`, `system_fingerprint`, `finish_reason`, token counts, `prompt_template_sha256`, `prompt_sha256`, `collector_version` |
-| scoring | `cat_score` (left blank on purpose) |
+Keys are read from env at runtime, never hard-coded, never written to disk.
