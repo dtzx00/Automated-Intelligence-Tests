@@ -100,8 +100,43 @@ python machine_data/data_collection.py --parallel --models machine_data/models.c
 ```
 
 `--n` counts assessments; each is 10 calls. Runs are resumable per model: existing rows in the
-lane file are counted and only the shortfall is collected. Rows are flushed per assessment, so an
-interrupted run loses nothing.
+lane file are counted and only the shortfall is collected, so re-running a finished job collects
+nothing. Rows flush per assessment, so an interruption loses at most the assessments in flight.
+
+Three levels of concurrency:
+
+| flag | default | what it does |
+|---|---|---|
+| (per lane) | — | every provider lane runs as its own thread |
+| `--concurrency` | 3 | models in flight within a lane |
+| `--item-concurrency` | 1 | calls in flight within one assessment |
+| `--min-gap` | 0.5 | seconds between call launches in a lane |
+
+`--item-concurrency` is timing only, never data: the 10 items are independent by construction,
+each a fresh single-message context, so the words a model returns do not depend on whether the
+calls overlap. Measured on GPT-4.1-mini: 8,740 ms sequential vs 1,616 ms at 5. Default is 1 so a
+model's request rate stays low and its per-item timestamps do not overlap; raise it for slow
+reasoning models, where 10 sequential calls at 25 s each is over four minutes per assessment.
+
+`--progress-every` (default 60 s) prints a heartbeat, since a run measured in hours otherwise gives
+no way to see where a model is up to short of grepping the CSV:
+
+```
+PROGRESS 1/2 models done | 5 assessments this run (50 calls) | 18.7/min | remaining 1 | ETA 0.0h
+         | furthest behind: GPT-4.1-mini 2/3, Claude-Haiku-4.5 3/3
+```
+
+## Failure handling
+
+Three tiers, so one bad model cannot take down a run:
+
+1. **A call** retries up to 6 times on transient failures (429, 5xx, timeouts, connection resets)
+   with linear backoff. A 400 mentioning temperature retries once at 1.0, since some models accept
+   only their default.
+2. **An item that still fails** leaves `word_i` blank and `[ERROR: ...]` in `raw_responses[i]`. The
+   other nine items are valid data, so the assessment is kept.
+3. **A model whose assessments return zero usable words three times running** is abandoned and
+   listed under SKIPPED at the end of the run.
 
 ## Provider lanes
 
