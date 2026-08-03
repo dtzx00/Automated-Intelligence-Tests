@@ -246,8 +246,7 @@ def call_once(provider, key, api_model, prompt, target_temp, seed):
 
 def build_row(name, api, prov, meta, language, pairs, fetched_at, prompt, payload,
               target_temp, temp_used, seed, req_ts, resp_ts, latency, batch):
-    words = parse_words(payload["text"])
-    status = "ok" if words else "failed"
+    words, status = parse_words(payload["text"])
     row = {
         "record_id":"", "model_name":name, "api_model_requested":api,
         "api_model_returned":payload.get("api_model_returned",""), "provider":prov,
