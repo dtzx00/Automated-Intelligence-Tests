@@ -20,9 +20,10 @@ OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessm
   each hold ten values as a JSON list, since a column per item for either would add twenty
   columns of long text.
 
-ITEMS ARE DRAWN FRESH PER ASSESSMENT from GET /api/cat/?language=en, which returns a random
-sample of the item pool — mirroring the per-participant randomisation. The drawn pairs are
-stored in the row, so every row is self-describing.
+ITEMS ARE DRAWN FRESH PER ASSESSMENT, locally, from the committed pair list, using a verbatim
+port of the sampling code that served the human participants. No network call for items: the Rugu
+endpoint was the run's single point of failure and it added nothing, since the pair list is fixed
+and public to us. The drawn pairs are stored in the row, so every row is self-describing.
 
 NO SCORING HERE, AND NO SCORE COLUMN. Raw collection files stay immutable; scoring is a separate
 pass that writes its own file keyed on record_id, using the audited proximity-only scorer. The
@@ -35,7 +36,7 @@ Usage:
   python data_collection.py --model "GPT-4o" --api-model gpt-4o-2024-08-06 --provider openai --n 1 --dry-run
   python data_collection.py --parallel --models machine_data/models.csv --n 500
 """
-import argparse, csv, hashlib, json, os, re, subprocess, sys, time, threading, queue
+import argparse, csv, hashlib, json, os, random, re, subprocess, sys, time, threading, queue
 import urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,8 +45,55 @@ HERE = Path(__file__).parent
 N_ITEMS = 10
 
 # --- item source ---------------------------------------------------------------------------
-ITEMS_BASE = os.environ.get("RUGU_API_BASE", "https://api-v2.rugu.io")
-ITEMS_PATH = "/api/cat/"
+# Cue pairs are drawn LOCALLY from the committed pair list, not fetched per assessment.
+#
+# items/cat_word_pairs_en.txt is question/dataset/words_en.txt copied from dtzx00/rugu-api-old —
+# the Django backend that served the human participants. The pairs are NOT arbitrary combinations
+# of words: they were precomputed by taking 200 common nouns and keeping every pair whose word
+# vectors sit at cosine distance 0.85-0.95 (see that repo's cat_questions.py). That band is the
+# instrument's difficulty control, so pairs must be sampled FROM this list, never generated.
+#
+# The file holds 22,674 lines = 7,558 distinct pairs, each appearing exactly 3 times because the
+# generator was run three times in append mode. Multiplicity is uniform, so sampling the file as
+# written is equivalent to sampling the distinct set; it is kept verbatim to match the server.
+ITEMS_FILE = HERE / "items" / "cat_word_pairs_en.txt"
+
+def load_pairs(path=None):
+    with open(path or ITEMS_FILE, encoding="utf-8") as f:
+        return [tuple(l.strip().split(",")) for l in f if l.strip()]
+
+_PAIR_POOL = None
+def pair_pool():
+    global _PAIR_POOL
+    if _PAIR_POOL is None:
+        _PAIR_POOL = load_pairs()
+    return _PAIR_POOL
+
+def draw_items(rng=random):
+    """Draw 10 cue pairs exactly the way the human participants' backend did.
+
+    Verbatim port of the CAT branch of question/views.py in dtseng00/rugu-api-old: pick a pair at
+    random, reject it if either word is already used, remove it from the candidate list either
+    way, and coin-flip the display order. The two properties that matter and that a naive
+    random.sample(pairs, 10) does NOT reproduce:
+      1. all 20 words in an assessment are distinct — verified against 90 live API draws, 0 had a
+         repeated word, while random.sample repeats in about two thirds of draws;
+      2. each pair is accepted uniformly at random from the pairs still compatible with the ones
+         already chosen, which is not the same as uniform over valid 10-pair sets.
+    """
+    pairs = list(pair_pool())
+    q, used = [], set()
+    while len(q) < N_ITEMS:
+        if not pairs:                      # cannot happen with this pool; restart if it ever does
+            pairs, q, used = list(pair_pool()), [], set()
+            continue
+        i = rng.randrange(len(pairs))
+        a, b = pairs.pop(i)
+        if a in used or b in used:
+            continue
+        used.add(a); used.add(b)
+        q.append((a, b) if rng.choice([True, False]) else (b, a))
+    return q, _now()
 
 # --- prompt --------------------------------------------------------------------------------
 # v3, written by Dawei 2026-08-03. Second-person restatement of the CAT instructions for
@@ -124,26 +172,6 @@ def _now():
 def _record_id(model_name, batch, started):
     h = hashlib.sha256(f"{model_name}|{batch}|{started}".encode()).hexdigest()[:12]
     return f"cat_{h}"
-
-# ---- item fetch --------------------------------------------------------------------------
-_UA = {"User-Agent": "Mozilla/5.0 (compatible; cat-collector)", "Accept": "application/json"}
-
-def fetch_items(language="en", retries=6, timeout=30):
-    """Fetch one fresh random draw of cue pairs. The endpoint 502s intermittently, so retry."""
-    url = f"{ITEMS_BASE}{ITEMS_PATH}?language={urllib.parse.quote(language)}"
-    last = None
-    for attempt in range(retries):
-        try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=_UA), timeout=timeout) as r:
-                d = json.loads(r.read())
-            pairs = [(str(p[0]), str(p[1])) for p in (d.get("data") or []) if len(p) >= 2]
-            if len(pairs) == N_ITEMS:
-                return pairs, _now()
-            last = f"expected {N_ITEMS} pairs, got {len(pairs)}"
-        except Exception as e:
-            last = str(e)[:120]
-        time.sleep(min(1.5 * (attempt + 1), 8))
-    raise RuntimeError(f"item fetch failed after {retries} tries: {last}")
 
 # ---- reasoning capture ---------------------------------------------------------------------
 # POLICY (locked 2026-07-27, Dawei): capture ALL reasoning the API returns, and use each model's
@@ -316,7 +344,7 @@ def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch
     item. The other nine are still valid data, so the assessment is always kept.
     """
     if pairs is None:
-        pairs, fetched_at = fetch_items(language)
+        pairs, fetched_at = draw_items()
     target_temp = provider_midpoint(prov)
     started = _now(); t_start = time.time()
     record_id = _record_id(model_name, batch, started)
@@ -420,11 +448,7 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop, language="en"):
     lk = write_lock(str(out_csv))
     dead = 0
     while made < n and not stop.is_set():
-        try:
-            pairs, fetched_at = fetch_items(language)
-        except RuntimeError as e:
-            print(f"FAIL {name} ({prov}): item fetch — {str(e)[:80]}", flush=True)
-            return name, made-have, f"error:items:{str(e)[:50]}"
+        pairs, fetched_at = draw_items()
         gate.wait()
         row = run_assessment(name, api, prov, meta, language, 1000 + made, batch, key,
                              pairs=pairs, fetched_at=fetched_at)

@@ -14,9 +14,25 @@ prime another. This matches the human form, where pairs are presented one at a t
 The one divergence from the human procedure: a participant accumulates memory across items and
 can revise earlier answers with the Previous button. Independent calls cannot.
 
-**Items are drawn fresh per assessment** from `GET /api/cat/?language=en`, which returns a
-random sample of the pool — mirroring per-participant randomisation. Every row stores its own
-pairs, so no row depends on knowing which draw it came from.
+**Items are drawn fresh per assessment, locally.** No network call: `machine_data/items/
+cat_word_pairs_en.txt` is the pair list, and `draw_items()` is a verbatim port of the sampling
+code in the Django backend that served the human participants (`question/views.py` in
+`dtzx00/rugu-api-old`) — pick a pair at random, reject it if either word is already used, remove
+it from the candidate list either way, coin-flip the display order.
+
+The pairs are not arbitrary word combinations. They were precomputed by taking 200 common nouns
+and keeping every pair whose word vectors sit at **cosine distance 0.85-0.95**, which is the
+instrument's difficulty control. Pairs must therefore be sampled from this list, never generated.
+The file holds 22,674 lines = 7,558 distinct pairs at exactly 3x each (the generator ran three
+times in append mode); multiplicity is uniform, so sampling it as written equals sampling the
+distinct set, and it is kept verbatim to match the server.
+
+Two properties a naive `random.sample(pairs, 10)` would break, both verified against the live
+endpoint (240 draws): all 20 words in an assessment are **distinct** (live 0/240 draws repeat a
+word, `random.sample` repeats in about two thirds), and each pair is accepted uniformly from the
+pairs still compatible with those already chosen. Parity evidence: 2,400/2,400 live pairs are in
+the committed list, and word-frequency correlation between live and local draws is r=0.588
+against a same-size local-vs-local noise floor of r=0.558 — indistinguishable.
 
 **Instructions are the instrument, verbatim** from the CAT frontend
 (`Module-Federation apps/cat/src/translations/en.json`). Two mechanical edits, both forced by
