@@ -48,28 +48,34 @@ ITEMS_BASE = os.environ.get("RUGU_API_BASE", "https://api-v2.rugu.io")
 ITEMS_PATH = "/api/cat/"
 
 # --- prompt --------------------------------------------------------------------------------
-# v2, written by Dawei 2026-08-03. Second-person restatement of the CAT instructions for
+# v3, written by Dawei 2026-08-03. Second-person restatement of the CAT instructions for
 # single-item, single-call delivery. Differences from the participant-facing UI text, on purpose:
-#   - no "Convergent Association Task" heading (models should not be primed with the task name)
+#   - no "Convergent Association Task" heading (models are not primed with the task name)
 #   - the cue words are named inline instead of shown as a card below the instructions
-#   - each rule is phrased as "Your word must ..." rather than an example label
+#   - each rule is phrased as "Your word must ..." rather than an example label, and spells out
+#     what the UI left to examples: no open or hyphenated compounds, no brands, no abbreviations
 #   - the UI's fifth rule, "Do not rely on objects in your surroundings", is dropped as inert
 #     for a model with no surroundings
-# The instrument's substance is unchanged: similar to BOTH cues, one lowercase English word,
-# no proper nouns, no specialist terms.
+# The instrument's substance is unchanged: similar to BOTH cues, one English word, no proper
+# nouns, no specialist terms.
+#
+# The verb is load-bearing: "Enter", not "Generate". Measured 2026-08-03 on 10 fixed pairs,
+# GPT-4.1-mini produced 5/10 invented cue blends ("inwestim", "comach", "plantfall") under
+# "Generate a word" and 0/10 under "Enter a word". Adding a "must be a real word" rule did not
+# repair it. Do not reintroduce "Generate".
 # ENGLISH ONLY (locked 2026-08-01, Dawei): the zh-Hans arm is not collected.
 ITEM_PROMPT_TEMPLATE = (
-    "Generate a word that is as similar as possible, in all meanings and uses to the word pair "
+    "Enter a word that is as similar as possible, in all meanings and uses to the word pair: "
     "\"{left}\" and \"{right}\".\n\n"
-    "- Your word must be similar to both of these words.\n"
-    "- Your word must be a single, lowercase word in English.\n"
-    "- Your word must not be a proper noun (i.e., no specific people or places).\n"
-    "- Your word must not be a specialized vocabulary or technical term.\n\n"
-    "Return only the single word you generated. Do not return anything else."
+    "- Your word must be similar to both words in the word pair.\n"
+    "- Your word must be a single word in English (i.e., no open or hyphenated compounds).\n"
+    "- Your word must not be a proper noun (i.e., no specific people, places or brands).\n"
+    "- Your word must not be a specialized vocabulary or technical term (i.e., no abbreviations).\n\n"
+    "Return only that single word. Do not return anything else."
 )
 # Bump this whenever ITEM_PROMPT_TEMPLATE changes. The rules ARE the instrument, so a wording
 # change is a measure change and every row must say which wording it saw.
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v3"
 
 def build_item_prompt(left, right):
     return ITEM_PROMPT_TEMPLATE.format(left=left, right=right)
@@ -229,22 +235,41 @@ def resolve_lane(model_row):
 # ---- parsing --------------------------------------------------------------------------------
 WORD_RE = re.compile(r"^[a-z][a-z'-]{0,29}$")
 
-def parse_word(text):
-    """Extract exactly one single-word answer, or fail loudly.
+def _reduce(fragment):
+    """Strip decoration from a fragment and return it if it is one valid word, else ''."""
+    t = re.sub(r"[*_`\"']", "", fragment)
+    t = re.sub(r"^\s*(?:\d+[.)]|[-•])\s*", "", t)
+    t = t.strip().strip(".,;:!?").strip().lower()
+    return t if WORD_RE.match(t) else ""
 
-    Models are told to return only the word, but some prepend their working
-    ("bowl / salary - both can be earned -> **prize**"). Scan lines from the BOTTOM and accept
-    the first line that reduces to one valid word; strip markdown, list markers, a leading
-    "answer:"-style label, and surrounding punctuation. If nothing reduces cleanly, store no
-    word and mark the call failed. Never guess which token was meant.
+def parse_word(text):
+    """Extract the answer from the LAST line only, or fail.
+
+    Models are told to return only the word, but some think out loud first. The answer, when
+    present, is always last. An earlier version scanned upward until some line reduced to a
+    single word, which silently harvested candidates the model had CONSIDERED AND REJECTED:
+    a Claude response ending "Actually, I think the answer is: **den**" was recorded as "tank"
+    from a bullet higher up. A wrong word that looks plausible is worse than no word, so only
+    the final line is read, and a response that trails off mid-sentence yields nothing.
+
+    Accepted on the last line: a bare word, a bolded word, and a trailing "... answer is: word".
     """
-    for line in reversed([l for l in (text or "").splitlines() if l.strip()]):
-        s = re.sub(r"[*_`\"]", "", line)
-        s = re.sub(r"^\s*(?:\d+[.)]|[-•])\s*", "", s)
-        s = re.sub(r"^\s*(?:answer|word|response)\s*[:\-]\s*", "", s, flags=re.IGNORECASE)
-        s = s.strip().strip(".,;:!?").strip().lower()
-        if WORD_RE.match(s):
-            return s, "ok"
+    lines = [l for l in (text or "").splitlines() if l.strip()]
+    if not lines:
+        return "", "failed"
+    last = lines[-1]
+    w = _reduce(last)
+    if w:
+        return w, "ok"
+    if ":" in last:                                  # "The answer is: **den**"
+        w = _reduce(last.rsplit(":", 1)[1])
+        if w:
+            return w, "ok"
+    bold = re.findall(r"\*\*([^*]+)\*\*", last)     # "... I would say **den** here"
+    if bold:
+        w = _reduce(bold[-1])
+        if w:
+            return w, "ok"
     return "", "failed"
 
 def call_once(provider, key, api_model, prompt, target_temp, seed):
