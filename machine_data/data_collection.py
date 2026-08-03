@@ -465,12 +465,12 @@ class Progress:
             remaining = sum(max(0, self.target - v) for v in at.values())
             elapsed = time.time() - self.t0
             rate = written / (elapsed / 60) if elapsed > 0 else 0
-            eta = (remaining / rate) if rate > 0 else float("inf")
+            eta = f"{remaining / rate / 60:.1f}h" if (rate > 0 and remaining) else ("done" if not remaining else "?")
             slowest = sorted(at.items(), key=lambda kv: kv[1])[:3]
             return (f"PROGRESS {len(self.finished)}/{self.total_models} models done | "
                     f"{written} assessments this run ({written*N_ITEMS} calls) | "
                     f"{rate:.1f}/min | remaining {remaining} | "
-                    f"ETA {eta/60:.1f}h" + (" | furthest behind: " +
+                    f"ETA {eta}" + (" | furthest behind: " +
                     ", ".join(f"{n} {v}/{self.target}" for n, v in slowest) if slowest else ""))
 
 def progress_printer(prog, every, stop):
