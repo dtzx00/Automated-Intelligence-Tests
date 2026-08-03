@@ -109,6 +109,7 @@ Three levels of concurrency:
 |---|---|---|
 | (per lane) | — | every provider lane runs as its own thread |
 | `--concurrency` | 3 | models in flight within a lane |
+| `--assessment-concurrency` | 1 | assessments in flight within one model |
 | `--item-concurrency` | 1 | calls in flight within one assessment |
 | `--min-gap` | 0.5 | seconds between call launches in a lane |
 
@@ -117,6 +118,11 @@ each a fresh single-message context, so the words a model returns do not depend 
 calls overlap. Measured on GPT-4.1-mini: 8,740 ms sequential vs 1,616 ms at 5. Default is 1 so a
 model's request rate stays low and its per-item timestamps do not overlap; raise it for slow
 reasoning models, where 10 sequential calls at 25 s each is over four minutes per assessment.
+
+`--assessment-timeout` (default 1200 s) writes an assessment with whatever came back once the
+deadline passes; unfinished items are recorded as errors. Without it a hung provider holds the run:
+a 300 s socket timeout times 6 retries is 30 minutes for a single item, and `Kimi-K2.6` and
+`MiniMax-M2.7` each sat over 25 minutes on one assessment during the 2026-08-03 shakedown.
 
 `--progress-every` (default 60 s) prints a heartbeat, since a run measured in hours otherwise gives
 no way to see where a model is up to short of grepping the CSV:

@@ -1,0 +1,79 @@
+#,model,provider,lane,region,intelligence,reasoning,api_model_id,api_id_type,release_date,date_precision,api_verified,date_source,dat_score,status,notes
+1,GPT-3.5-Turbo,openai,,Western,all-rounder,No,gpt-3.5-turbo,alias,2023-02-28,exact,yes,openai /v1/models created,76.7296,live,
+2,Moonshot-v1-128k,moonshot,,Eastern,efficient,No,moonshot-v1-128k,alias,2024-02-01,exact,no,published announcement / dataset,74.4547,live,
+3,Moonshot-v1-8k,moonshot,,Eastern,efficient,No,moonshot-v1-8k,alias,2024-02-01,exact,no,published announcement / dataset,74.4436,live,
+4,GPT-4.0-Turbo,openai,,Western,all-rounder,No,gpt-4-turbo-2024-04-09,pinned,2024-04-08,exact,yes,openai /v1/models created for gpt-4-turbo-2024-04-09 (id recovered from machine_all.csv provenance),81.7663,live,
+5,GPT-4o,openai,,Western,all-rounder,No,gpt-4o-2024-08-06,pinned,2024-08-04,exact,yes,openai /v1/models created,76.1985,live,
+6,DeepSeek-R1,deepseek,qwen,Eastern,reasoning,Yes,deepseek-r1,alias,2025-01-20,exact,no,published announcement / dataset,76.4915,live,"recovered: served by DashScope, not DeepSeek's own API"
+7,Qwen-Turbo,qwen,,Eastern,efficient,No,qwen-turbo,alias,2025-02-01,alias_unresolved,no,bare alias qwen-turbo; only dated snapshot is 2024-11-01,71.3147,live,
+8,o4-mini,openai,,Western,reasoning,Yes,o4-mini-2025-04-16,pinned,2025-04-08,exact,yes,openai /v1/models created,76.1374,live,
+9,GPT-4.1,openai,,Western,all-rounder,No,gpt-4.1-2025-04-14,pinned,2025-04-10,exact,yes,openai /v1/models created,77.2014,live,
+10,GPT-4.1-mini,openai,,Western,efficient,No,gpt-4.1-mini-2025-04-14,pinned,2025-04-10,exact,yes,openai /v1/models created,76.7683,live,
+11,GPT-4.1-nano,openai,,Western,efficient,No,gpt-4.1-nano-2025-04-14,pinned,2025-04-10,exact,yes,openai /v1/models created,78.6453,live,
+12,Qwen3-235B-Instruct,qwen,,Eastern,all-rounder,No,qwen3-235b-a22b-instruct-2507,pinned,2025-07-21,exact,no,published announcement / dataset,75.1348,live,
+13,GPT-5,openai,,Western,hybrid,Yes,gpt-5-2025-08-07,pinned,2025-08-01,exact,yes,openai /v1/models created,78.8372,live,
+14,Claude-Opus-4.1,anthropic,,Western,hybrid,Yes,claude-opus-4-1-20250805,pinned,2025-08-05,exact,yes,anthropic /v1/models created_at,84.7598,live,
+15,GPT-5-mini,openai,,Western,efficient,No,gpt-5-mini-2025-08-07,pinned,2025-08-05,exact,yes,openai /v1/models created,75.7397,live,
+16,Qwen-Max,qwen,,Eastern,hybrid,No,qwen-max,alias,2025-09-13,alias_unresolved,no,bare alias qwen-max; DashScope exposes no dated snapshot,75.1459,live,
+17,Claude-Sonnet-4.5,anthropic,,Western,hybrid,No,claude-sonnet-4-5-20250929,pinned,2025-09-29,exact,yes,anthropic /v1/models created_at,80.9225,live,
+18,Claude-Haiku-4.5,anthropic,,Western,efficient,No,claude-haiku-4-5-20251001,pinned,2025-10-15,exact,yes,anthropic /v1/models created_at,80.9580,live,
+19,GPT-5.1,openai,,Western,hybrid,Yes,gpt-5.1-2025-11-13,pinned,2025-11-10,exact,yes,openai /v1/models created,80.8367,live,
+20,Claude-Opus-4.5,anthropic,,Western,hybrid,Yes,claude-opus-4-5-20251101,pinned,2025-11-24,exact,yes,anthropic /v1/models created_at,79.6869,live,
+21,DeepSeek-V3.2,deepseek,hunyuan,Eastern,hybrid,Yes,deepseek-v3.2,alias,2025-12-01,exact,no,published announcement / dataset,79.4027,live,recovered: served by Tencent gateway + DashScope
+22,Qwen-Plus,qwen,,Eastern,hybrid,No,qwen-plus,alias,2025-12-01,alias_unresolved,no,latest pinned snapshot qwen-plus-2025-12-01 at collection,77.8874,live,
+23,GPT-5.2,openai,,Western,hybrid,Yes,gpt-5.2-2025-12-11,pinned,2025-12-09,exact,yes,openai /v1/models created,79.5105,live,
+24,Qwen3-Max,qwen,,Eastern,hybrid,Yes,qwen3-max-2026-01-23,pinned,2026-01-23,exact,no,api id actually called: qwen3-max-2026-01-23 (pinned snapshot; renamed from 'Qwen4-Max' 2026-07-29 to match what answered),76.4485,live,
+25,Kimi-K2.5,moonshot,,Eastern,all-rounder,No,kimi-k2.5,alias,2026-01-27,exact,no,zdnet.com/article/moonshot-kimi-k2-5-model + Baidu Baike (2026-01-27),79.4300,live,
+26,MiniMax-M2.5,minimax,,Eastern,reasoning,Yes,minimax-m2.5,alias,2026-02-12,exact,no,minimax.io/blog/minimax-m25 (announcement 2026-02-12),75.5865,live,
+27,Qwen3.5-Plus,qwen,,Eastern,hybrid,No,qwen3.5-plus,alias,2026-02-15,exact,no,earliest pinned DashScope snapshot qwen3.5-plus-2026-02-15,72.8309,live,
+28,Claude-Sonnet-4.6,anthropic,,Western,hybrid,No,claude-sonnet-4-6,alias,2026-02-17,exact,yes,anthropic /v1/models created_at,79.9676,live,
+29,GPT-5.4,openai,,Western,hybrid,No,gpt-5.4-2026-03-05,pinned,2026-03-04,exact,yes,openai /v1/models created,76.7915,live,
+30,Grok-4.20-nonreason,xai,,Western,all-rounder,No,grok-4.20-0309-non-reasoning,pinned,2026-03-09,exact,yes,xai /v1/models created,73.9793,live,
+31,Grok-4.20-reason,xai,,Western,reasoning,Yes,grok-4.20-0309-reasoning,pinned,2026-03-09,exact,yes,xai /v1/models created,75.9158,live,
+32,MiniMax-M2.7,minimax,,Eastern,reasoning,Yes,minimax-m2.7,alias,2026-03-18,exact,no,minimax.io/news/minimax-m27-en + platform release notes (2026-03-18),77.8586,live,
+33,Claude-Opus-4.7,anthropic,,Western,hybrid,Yes,claude-opus-4-7,alias,2026-04-14,exact,yes,anthropic /v1/models created_at,85.8920,live,
+34,Grok-4.3,xai,,Western,hybrid,Yes,grok-4.3,alias,2026-04-17,exact,yes,xai /v1/models created,76.5504,live,
+35,Kimi-K2.6,moonshot,,Eastern,reasoning,Yes,kimi-k2.6,alias,2026-04-21,exact,no,forum.moonshot.ai/t/meet-kimi-k2-6 (2026-04-21),78.5548,live,
+36,GPT-5.5,openai,,Western,hybrid,Yes,gpt-5.5-2026-04-23,pinned,2026-04-22,exact,yes,openai /v1/models created,78.1195,live,
+37,DeepSeek-V4-Flash,deepseek,,Eastern,efficient,No,deepseek-v4-flash,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24),73.9544,live,
+38,DeepSeek-V4-Flash-TH,deepseek,hunyuan,Eastern,efficient,No,deepseek-v4-flash,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24; thinking mode of v4-flash),73.5894,live,lane override: tokenhub copy of v4-flash
+39,DeepSeek-V4-Pro,deepseek,,Eastern,reasoning,Yes,deepseek-v4-pro,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24),77.3413,live,
+40,Qwen3.7-Max,qwen,,Eastern,hybrid,Yes,qwen3.7-max,alias,2026-05-17,exact,no,earliest pinned DashScope snapshot qwen3.7-max-2026-05-17,77.5067,live,
+41,MiniMax-M3,minimax,,Eastern,reasoning,Yes,minimax-m3,alias,2026-06-01,exact,no,platform.minimax.io/docs/release-notes/models (Jun 1 2026),78.4807,live,
+42,Claude-Fable-5,anthropic,,Western,hybrid,Yes,claude-fable-5,alias,2026-06-07,exact,yes,anthropic /v1/models created_at,83.4856,live,
+43,GPT-5.6-Sol,openai,,Western,hybrid,Yes,gpt-5.6-sol,alias,2026-06-23,exact,yes,openai /v1/models created,80.4182,live,
+44,Claude-Sonnet-5,anthropic,,Western,hybrid,No,claude-sonnet-5,alias,2026-06-29,exact,yes,anthropic /v1/models created_at,81.1623,live,
+45,Grok-4.5,xai,,Western,hybrid,Yes,grok-4.5,alias,2026-06-29,exact,yes,xai /v1/models created,75.9292,live,
+46,Hunyuan-Hy3,tencent,,Eastern,hybrid,No,hy3,alias,2026-07-06,exact,no,tencent.com Hy3 GA announcement (2026-07-06); preview was 2026-04-23,77.5208,live,
+47,Kimi-K3,moonshot,,Eastern,reasoning,Yes,kimi-k3,alias,2026-07-16,exact,no,published announcement / dataset,77.5552,live,
+48,Claude-Opus-5,anthropic,,Western,hybrid,Yes,claude-opus-5,alias,2026-07-24,exact,yes,anthropic /v1/models created_at,84.3003,live,
+49,GPT-4,openai,,Western,all-rounder,No,gpt-4,snapshot,2023-03-14,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — original GPT-4
+50,GPT-4-0613,openai,,Western,all-rounder,No,gpt-4-0613,snapshot,2023-06-13,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — June 2023 snapshot
+51,GPT-3.5-Turbo-1106,openai,,Western,efficient,No,gpt-3.5-turbo-1106,snapshot,2023-11-06,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+52,GPT-3.5-Turbo-0125,openai,,Western,efficient,No,gpt-3.5-turbo-0125,snapshot,2024-01-25,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+53,GPT-4o-first,openai,,Western,all-rounder,No,gpt-4o-2024-05-13,snapshot,2024-05-13,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — first 4o release
+54,GPT-4o-mini,openai,,Western,efficient,No,gpt-4o-mini-2024-07-18,snapshot,2024-07-18,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+55,o1,openai,,Western,reasoning,Yes,o1-2024-12-17,snapshot,2024-12-17,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — first reasoning model
+56,o3-mini,openai,,Western,reasoning,Yes,o3-mini-2025-01-31,snapshot,2025-01-31,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+57,o1-pro,openai,,Western,reasoning,Yes,o1-pro-2025-03-19,snapshot,2025-03-19,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+58,o3,openai,,Western,reasoning,Yes,o3-2025-04-16,snapshot,2025-04-16,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+59,o3-pro,openai,,Western,reasoning,Yes,o3-pro-2025-06-10,snapshot,2025-06-10,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+60,Qwen-Max-1201,qwen,,Chinese,hybrid,No,qwen-max-1201,snapshot,2023-12-01,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — early Qwen-Max
+61,Qwen-72B-Chat,qwen,,Chinese,hybrid,No,qwen-72b-chat,alias,2023-11-30,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+62,Qwen1.5-72B-Chat,qwen,,Chinese,hybrid,No,qwen1.5-72b-chat,alias,2024-02-04,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+63,Qwen2-72B-Instruct,qwen,,Chinese,hybrid,No,qwen2-57b-a14b-instruct,alias,2024-06-06,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 72b not served; 57b is
+64,Qwen-Turbo-2024-11,qwen,,Chinese,efficient,No,qwen-turbo-2024-11-01,snapshot,2024-11-01,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — 
+65,Moonshot-v1-32k,moonshot,,Chinese,all-rounder,No,moonshot-v1-32k,snapshot,2024-02-01,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — completes the v1 family
+66,GPT-5-nano,openai,,Western,efficient,No,gpt-5-nano-2025-08-07,snapshot,2025-08-07,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+67,GPT-5-pro,openai,,Western,reasoning,Yes,gpt-5-pro-2025-10-06,snapshot,2025-10-06,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+68,GPT-5.2-pro,openai,,Western,reasoning,Yes,gpt-5.2-pro-2025-12-11,snapshot,2025-12-11,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+69,GPT-5.4-mini,openai,,Western,efficient,No,gpt-5.4-mini-2026-03-17,snapshot,2026-03-17,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+70,GPT-5.4-pro,openai,,Western,reasoning,Yes,gpt-5.4-pro-2026-03-05,snapshot,2026-03-05,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+71,GPT-5.5-pro,openai,,Western,reasoning,Yes,gpt-5.5-pro-2026-04-23,snapshot,2026-04-23,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+72,GPT-5.6-Luna,openai,,Western,reasoning,Yes,gpt-5.6-luna,alias,2026-06-23,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — sibling of Sol
+73,GPT-5.6-Terra,openai,,Western,reasoning,Yes,gpt-5.6-terra,alias,2026-06-23,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — sibling of Sol
+74,Claude-Opus-4.6,anthropic,,Western,reasoning,Yes,claude-opus-4-6,snapshot,2026-02-04,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+75,Claude-Opus-4.8,anthropic,,Western,reasoning,Yes,claude-opus-4-8,snapshot,2026-05-28,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — 
+76,GLM-5,zhipu,hunyuan,Chinese,reasoning,Yes,glm-5,snapshot,2026-02-10,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — new vendor
+77,GLM-5.2,zhipu,hunyuan,Chinese,reasoning,Yes,glm-5.2,snapshot,2026-06-15,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — new vendor
+78,MiniMax-M2.1,minimax,qwen,Chinese,reasoning,Yes,MiniMax-M2.1,snapshot,2026-02-13,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — fills the M2 line

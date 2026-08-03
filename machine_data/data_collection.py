@@ -299,6 +299,14 @@ def parse_word(text):
         w = _reduce(bold[-1])
         if w:
             return w, "ok"
+    # Answer-then-explain: some models put the word on line 1 and justify below
+    # (Grok-4.20-reason does this). Safe to accept because a model that deliberates FIRST never
+    # opens with a bare single word — it opens with prose. So this cannot pick up a rejected
+    # candidate, which is the failure the last-line rule exists to prevent.
+    if len(lines) > 1:
+        w = _reduce(lines[0])
+        if w:
+            return w, "ok"
     return "", "failed"
 
 def call_once(provider, key, api_model, prompt, target_temp, seed):
@@ -338,7 +346,7 @@ def call_item(provider, key, api_model, prompt, target_temp, seed, max_retries=6
 
 # ---- one assessment = 10 calls --------------------------------------------------------------
 def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch, key,
-                   pairs=None, fetched_at=None, item_workers=1):
+                   pairs=None, fetched_at=None, item_workers=1, deadline_s=1200):
     """Fetch 10 pairs (unless supplied), call the model once per pair, return one row.
 
     A failed call leaves its word blank and records "[ERROR: ...]" in raw_responses for that
@@ -361,11 +369,31 @@ def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch
     # Items are independent by construction — each call is a fresh context — so running them
     # concurrently changes timing only, never the data. Default 1 keeps a model's request rate
     # low and its per-item timestamps non-overlapping; raise it for slow reasoning models.
+    # A hung provider must not hold the run. Kimi-K2.6 and MiniMax-M2.7 each sat >25 min on one
+    # assessment (300s socket timeout x 6 retries = 30 min per item, worst case). Past the
+    # deadline the assessment is written with whatever came back; unfinished items are errors.
+    started_at = time.time()
+    ex = cf.ThreadPoolExecutor(min(max(item_workers, 1), N_ITEMS))
+    futs = {ex.submit(one_item, i): i for i in range(len(pairs))} if item_workers > 1 else {}
     if item_workers > 1:
-        with cf.ThreadPoolExecutor(min(item_workers, N_ITEMS)) as ex:
-            results = sorted(ex.map(one_item, range(len(pairs))), key=lambda r: r[0])
+        results = []
+        for fut in futs:
+            left = deadline_s - (time.time() - started_at)
+            try:
+                results.append(fut.result(timeout=max(left, 0)))
+            except cf.TimeoutError:
+                i = futs[fut]
+                results.append((i, _now(), _now(), None, "", f"assessment deadline {deadline_s}s"))
+        ex.shutdown(wait=False)
+        results.sort(key=lambda r: r[0])
     else:
-        results = [one_item(i) for i in range(len(pairs))]
+        ex.shutdown(wait=False)
+        results = []
+        for i in range(len(pairs)):
+            if time.time() - started_at > deadline_s:
+                results.append((i, _now(), _now(), None, "", f"assessment deadline {deadline_s}s"))
+            else:
+                results.append(one_item(i))
 
     words, item_ts, raws, reasonings = [], [], [], []
     api_model_returned = ""; temp_effective = ""; max_tokens = ""
@@ -487,7 +515,7 @@ class LaunchGate:
             self.last = time.time()
 
 def collect_one(model_row, n, out_csv, batch, gate, key, stop, language="en",
-                item_workers=1, prog=None):
+                item_workers=1, prog=None, assess_workers=1, deadline_s=1200):
     prov = resolve_lane(model_row); name = model_row["model"]
     api = model_row.get("api_model_id") or model_row["model"]
     meta = {"vendor": model_row.get("provider","")}
@@ -495,29 +523,62 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop, language="en",
     if prog: prog.start_model(name, have)
     lk = write_lock(str(out_csv))
     dead = 0
-    while made < n and not stop.is_set():
+    counter = threading.Lock()
+
+    def one_assessment(seq):
         pairs, fetched_at = draw_items()
         gate.wait()
-        row = run_assessment(name, api, prov, meta, language, 1000 + made, batch, key,
-                             pairs=pairs, fetched_at=fetched_at, item_workers=item_workers)
+        row = run_assessment(name, api, prov, meta, language, 1000 + seq, batch, key,
+                             pairs=pairs, fetched_at=fetched_at, item_workers=item_workers,
+                             deadline_s=deadline_s)
         with lk: write_assessment(out_csv, row)
-        made += 1
-        if prog: prog.tick(name)
-        if not any(row[f"word_{i}"] for i in range(N_ITEMS)):
-            dead += 1
-            if dead >= 3:
-                errs = json.loads(row["raw_responses"])
-                err = next((e for e in errs if e.startswith("[ERROR")), "all calls failed")
-                print(f"FAIL {name} ({prov}): {err[:90]}", flush=True)
-                if prog: prog.finish(name)
-                return name, made-have, f"error:{err[:60]}"
-        else:
-            dead = 0
+        return row
+
+    # Assessments within a model can run concurrently. Serial assessments made the slowest model
+    # the whole run's floor: MiniMax-M3 at 992s per assessment is 138 hours for n=500 on its own.
+    if assess_workers > 1:
+        with cf.ThreadPoolExecutor(assess_workers) as ex:
+            pending = {}
+            seq = made
+            while (made < n or pending) and not stop.is_set():
+                while len(pending) < assess_workers and seq < n:
+                    pending[ex.submit(one_assessment, seq)] = seq; seq += 1
+                if not pending: break
+                done, _ = cf.wait(list(pending), return_when=cf.FIRST_COMPLETED)
+                for fut in done:
+                    pending.pop(fut)
+                    row = fut.result()
+                    with counter:
+                        made += 1
+                    if prog: prog.tick(name)
+                    if not any(row[f"word_{i}"] for i in range(N_ITEMS)):
+                        dead += 1
+                    else:
+                        dead = 0
+                if dead >= 3:
+                    print(f"FAIL {name} ({prov}): 3 consecutive empty assessments", flush=True)
+                    if prog: prog.finish(name)
+                    return name, made-have, "error:3 empty assessments"
+    else:
+        while made < n and not stop.is_set():
+            row = one_assessment(made)
+            made += 1
+            if prog: prog.tick(name)
+            if not any(row[f"word_{i}"] for i in range(N_ITEMS)):
+                dead += 1
+                if dead >= 3:
+                    errs = json.loads(row["raw_responses"])
+                    err = next((e for e in errs if e.startswith("[ERROR")), "all calls failed")
+                    print(f"FAIL {name} ({prov}): {err[:90]}", flush=True)
+                    if prog: prog.finish(name)
+                    return name, made-have, f"error:{err[:60]}"
+            else:
+                dead = 0
     if prog: prog.finish(name)
     return name, made-have, "done"
 
 def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, language,
-             lane_results=None, item_workers=1, prog=None):
+             lane_results=None, item_workers=1, prog=None, assess_workers=1, deadline_s=1200):
     key = os.environ.get(PROVIDERS[prov][1])
     if not key:
         print(f"LANE {prov}: MISSING KEY {PROVIDERS[prov][1]} — skipped", flush=True); return
@@ -534,7 +595,8 @@ def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, langua
             except queue.Empty: return
             try:
                 name, got, st = collect_one(m, n, out_csv, batch, gate, key, stop, language,
-                                            item_workers=item_workers, prog=prog)
+                                            item_workers=item_workers, prog=prog,
+                                            assess_workers=assess_workers, deadline_s=deadline_s)
                 results.append((name, got, st))
                 print(f"  [{prov}] {name}: +{got} ({st})", flush=True)
             finally:
@@ -546,7 +608,7 @@ def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, langua
     print(f"LANE DONE: {prov}", flush=True)
 
 def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, language, only=None,
-                 item_workers=1, progress_every=60):
+                 item_workers=1, progress_every=60, assess_workers=1, deadline_s=1200):
     lanes = load_live(models_csv, only)
     if not lanes: sys.exit("no live lanes matched")
     Path(out_dir).mkdir(parents=True, exist_ok=True)
@@ -561,7 +623,7 @@ def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, language, 
     for prov, models in lanes.items():
         t = threading.Thread(target=run_lane, args=(prov, models, n, out_dir, batch, concurrency,
                                                     min_gap, stop, language, results, item_workers,
-                                                    prog), daemon=True)
+                                                    prog, assess_workers, deadline_s), daemon=True)
         t.start(); threads.append(t)
     try:
         for t in threads: t.join()
@@ -616,13 +678,18 @@ def main():
     ap.add_argument("--item-concurrency", type=int, default=1,
                     help="calls in flight WITHIN one assessment; timing only, data identical")
     ap.add_argument("--progress-every", type=float, default=60, help="heartbeat seconds")
+    ap.add_argument("--assessment-concurrency", type=int, default=1,
+                    help="assessments in flight per model")
+    ap.add_argument("--assessment-timeout", type=float, default=1200,
+                    help="seconds before an assessment is written with whatever came back")
     ap.add_argument("--only")
     ap.add_argument("--models", default=str(HERE/"models.csv"))
     a = ap.parse_args()
     if a.parallel:
         run_parallel(a.models, a.n, a.out_dir, a.batch, a.concurrency, a.min_gap, a.language,
                      only=set(a.only.split(",")) if a.only else None,
-                     item_workers=a.item_concurrency, progress_every=a.progress_every); return
+                     item_workers=a.item_concurrency, progress_every=a.progress_every,
+                     assess_workers=a.assessment_concurrency, deadline_s=a.assessment_timeout); return
     if not (a.model and a.provider): sys.exit("need --model and --provider (or --parallel)")
     out = Path(a.out_dir)/f"topup_{a.provider}.csv"
     generate(a.model, a.api_model or a.model, a.provider, a.n, out,
