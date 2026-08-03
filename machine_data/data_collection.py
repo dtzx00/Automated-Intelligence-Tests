@@ -72,7 +72,7 @@ def pair_pool():
 def draw_items(rng=random):
     """Draw 10 cue pairs exactly the way the human participants' backend did.
 
-    Verbatim port of the CAT branch of question/views.py in dtseng00/rugu-api-old: pick a pair at
+    Verbatim port of the CAT branch of question/views.py in dtzx00/rugu-api-old: pick a pair at
     random, reject it if either word is already used, remove it from the candidate list either
     way, and coin-flip the display order. The two properties that matter and that a naive
     random.sample(pairs, 10) does NOT reproduce:
