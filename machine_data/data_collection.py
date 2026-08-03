@@ -130,6 +130,7 @@ def build_item_prompt(left, right):
     return ITEM_PROMPT_TEMPLATE.format(left=left, right=right)
 
 PROVIDER_TEMP_RANGE = {
+    "doubao": (0, 1),      # Ark accepts (0,1]; midpoint 0.5
     "openai": (0, 2), "xai": (0, 2), "deepseek": (0, 2), "qwen": (0, 2), "hunyuan": (0, 2),
     "anthropic": (0, 1), "moonshot": (0, 1), "openrouter": (0, 2),
 }
@@ -244,6 +245,10 @@ PROVIDERS = {
     "qwen":      (lambda k,m,p,t,s: _openai_like("https://dashscope.aliyuncs.com/compatible-mode/v1", k, m, p, t, s), "QWEN_API_KEY", True),
     "hunyuan":   (lambda k,m,p,t,s: _openai_like("https://tokenhub.tencentmaas.com/v1", k, m, p, t, None), "HUNYUAN_API_KEY", False),
     "moonshot":  (lambda k,m,p,t,s: _openai_like("https://api.moonshot.ai/v1", k, m, p, t, None), "MOONSHOT_API_KEY", False),
+    # Volcano Engine Ark (ByteDance). OpenAI-compatible. Serves Doubao plus third-party weights
+    # (DeepSeek, Kimi, Qwen, GLM, Mistral) at their ORIGINAL dated snapshots, several of which are
+    # no longer available from the vendors' own APIs.
+    "doubao":    (lambda k,m,p,t,s: _openai_like("https://ark.cn-beijing.volces.com/api/v3", k, m, p, t, None), "DOUBAO_API_KEY", False),
 }
 
 # ---- vendor -> API lane ---------------------------------------------------------------------

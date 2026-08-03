@@ -1,0 +1,322 @@
+[
+ [
+  "doubao-seed-2-1-pro-260628",
+  "FAIL",
+  300650,
+  "The read operation timed out",
+  0,
+  0
+ ],
+ [
+  "doubao-seed-2-1-turbo-260628",
+  "OK",
+  160076,
+  "scale",
+  7920,
+  5
+ ],
+ [
+  "doubao-seed-2-0-pro-260215",
+  "OK",
+  27304,
+  "scale",
+  3773,
+  5
+ ],
+ [
+  "doubao-seed-2-0-mini-260428",
+  "OK",
+  11338,
+  "scale",
+  5410,
+  5
+ ],
+ [
+  "doubao-seed-2-0-lite-260428",
+  "OK",
+  26387,
+  "fry",
+  478,
+  3
+ ],
+ [
+  "doubao-seed-evolving",
+  "FAIL",
+  300561,
+  "The read operation timed out",
+  0,
+  0
+ ],
+ [
+  "doubao-seed-1-8-251228",
+  "FAIL",
+  976,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-seed-1-6-250615",
+  "FAIL",
+  1088,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-seed-1-6-251015",
+  "FAIL",
+  1204,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-seed-1-6-thinking-250715",
+  "FAIL",
+  894,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-seed-1-6-flash-250828",
+  "FAIL",
+  799,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-seed-1-6-lite-251015",
+  "FAIL",
+  945,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-1-5-pro-32k-250115",
+  "FAIL",
+  952,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-1-5-lite-32k-250115",
+  "FAIL",
+  765,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-1-5-pro-256k-250115",
+  "FAIL",
+  792,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-1-5-thinking-pro-250415",
+  "FAIL",
+  883,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-pro-32k-240615",
+  "FAIL",
+  772,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-pro-32k-241215",
+  "FAIL",
+  895,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-pro-128k-240515",
+  "FAIL",
+  769,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-lite-32k-240828",
+  "FAIL",
+  766,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-lite-4k-240328",
+  "FAIL",
+  788,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "doubao-pro-4k-240515",
+  "FAIL",
+  770,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "kimi-k2-250711",
+  "FAIL",
+  906,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "kimi-k2-250905",
+  "FAIL",
+  1240,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "kimi-k2-thinking-251104",
+  "FAIL",
+  977,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "deepseek-v3-241226",
+  "FAIL",
+  905,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "deepseek-v3-250324",
+  "FAIL",
+  780,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "deepseek-r1-250120",
+  "FAIL",
+  926,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "deepseek-r1-250528",
+  "FAIL",
+  1035,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "deepseek-v3-1-250821",
+  "FAIL",
+  776,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "deepseek-v3-2-251201",
+  "FAIL",
+  907,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "deepseek-v4-flash-260425",
+  "FAIL",
+  1003,
+  "HTTP 404: {\"error\":{\"code\":\"ModelNotOpen\",\"message\":\"Your account 2129967456 has",
+  0,
+  0
+ ],
+ [
+  "deepseek-v4-pro-260425",
+  "FAIL",
+  847,
+  "HTTP 404: {\"error\":{\"code\":\"ModelNotOpen\",\"message\":\"Your account 2129967456 has",
+  0,
+  0
+ ],
+ [
+  "qwen2-5-72b-20240919",
+  "FAIL",
+  767,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "qwen3-32b-20250429",
+  "FAIL",
+  906,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "qwen3-14b-20250429",
+  "FAIL",
+  1176,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "mistral-7b-instruct-v0.2",
+  "FAIL",
+  790,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "glm-4-5-air-20250728",
+  "FAIL",
+  939,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "glm-4-7-251222",
+  "FAIL",
+  791,
+  "HTTP 404: {\"error\":{\"code\":\"InvalidEndpointOrModel.NotFound\",\"message\":\"The mode",
+  0,
+  0
+ ],
+ [
+  "glm-5-2-260617",
+  "FAIL",
+  300552,
+  "The read operation timed out",
+  0,
+  0
+ ]
+]
