@@ -19,7 +19,7 @@
 18,Claude-Haiku-4.5,anthropic,,Western,efficient,No,claude-haiku-4-5-20251001,pinned,2025-10-15,exact,yes,anthropic /v1/models created_at,80.9580,live,,10,5733
 19,GPT-5.1,openai,,Western,hybrid,Yes,gpt-5.1-2025-11-13,pinned,2025-11-10,exact,yes,openai /v1/models created,80.8367,live,,10,2017
 20,Claude-Opus-4.5,anthropic,,Western,hybrid,Yes,claude-opus-4-5-20251101,pinned,2025-11-24,exact,yes,anthropic /v1/models created_at,79.6869,live,,10,3101
-21,DeepSeek-V3.2,deepseek,hunyuan,Eastern,hybrid,Yes,deepseek-v3.2,alias,2025-12-01,exact,no,published announcement / dataset,79.4027,live,recovered: served by Tencent gateway + DashScope,0,1939
+21,DeepSeek-V3.2,deepseek,qwen,Eastern,hybrid,Yes,deepseek-v3.2,alias,2025-12-01,exact,no,published announcement / dataset,79.4027,live,recovered: DashScope serves it as deepseek-v3.2; DeepSeek's own API and the Tencent gateway do not,0,1939
 22,Qwen-Plus,qwen,,Eastern,hybrid,No,qwen-plus,alias,2025-12-01,alias_unresolved,no,latest pinned snapshot qwen-plus-2025-12-01 at collection,77.8874,live,,10,2996
 23,GPT-5.2,openai,,Western,hybrid,Yes,gpt-5.2-2025-12-11,pinned,2025-12-09,exact,yes,openai /v1/models created,79.5105,live,,10,2031
 24,Qwen3-Max,qwen,,Eastern,hybrid,Yes,qwen3-max-2026-01-23,pinned,2026-01-23,exact,no,api id actually called: qwen3-max-2026-01-23 (pinned snapshot; renamed from 'Qwen4-Max' 2026-07-29 to match what answered),76.4485,live,,10,3039
@@ -77,3 +77,7 @@
 76,GLM-5,zhipu,hunyuan,Eastern,reasoning,Yes,glm-5,snapshot,2026-02-10,UNVERIFIED,no,PENDING VERIFICATION,,dropped,"dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart",1,208023
 77,GLM-5.2,zhipu,hunyuan,Eastern,reasoning,Yes,glm-5.2,snapshot,2026-06-15,UNVERIFIED,no,PENDING VERIFICATION,,dropped,"dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart",4,303265
 78,MiniMax-M2.1,minimax,qwen,Eastern,reasoning,Yes,MiniMax-M2.1,snapshot,2026-02-13,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — fills the M2 line,10,432837
+79,Doubao-Seed-2.0-mini,bytedance,doubao,Eastern,efficient,Yes,doubao-seed-2-0-mini-260428,snapshot,2026-04-28,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: Volcano Ark; new vendor (ByteDance),,
+80,Doubao-Seed-2.0-pro,bytedance,doubao,Eastern,hybrid,Yes,doubao-seed-2-0-pro-260215,snapshot,2026-02-15,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: Volcano Ark; new vendor (ByteDance),,
+81,Doubao-Seed-2.1-turbo,bytedance,doubao,Eastern,reasoning,Yes,doubao-seed-2-1-turbo-260628,snapshot,2026-06-28,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: Volcano Ark; new vendor (ByteDance),,
+82,DeepSeek-V3.1,deepseek,qwen,Eastern,all-rounder,No,deepseek-v3.1,alias,2025-08-21,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: DashScope; fills the DeepSeek line between V3 and V3.2,,

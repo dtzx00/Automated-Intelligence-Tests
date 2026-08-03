@@ -69,10 +69,32 @@ Dawei subscribed. Six models answer:
 Planned: take the first two plus `seed-2-1-turbo` (one per intelligence class). All six are 2026
 releases, so ByteDance fixes vendor concentration but adds no era depth.
 
-**Everything from 2024-2025 on Ark returns 404** even though the catalogue lists it — all older
-Doubao snapshots, `kimi-k2-250711`, `deepseek-v3-241226`, `deepseek-r1-250120`,
-`qwen2-5-72b-20240919`, `mistral-7b-instruct-v0.2`, `glm-4-5-air`, `glm-4-7`. Theory: closed to
-new subscriptions. Pending a desktop check of 开通管理.
+**Everything from 2024-2025 on Ark is permanently unavailable — CLOSED 2026-08-03.** Dawei checked
+开通管理 on desktop and subscribed everything assignable; the list is identical to mobile and
+contains 2026 models only. Re-probed after that: `kimi-k2-250711`, `deepseek-v3-241226`,
+`deepseek-r1-250120`, `doubao-1-5-pro-32k-250115`, `doubao-pro-32k-240615`, `qwen2-5-72b-20240919`,
+`mistral-7b-instruct-v0.2`, `doubao-seed-1-6-250615`, `doubao-seed-1-8-251228` all still return
+`InvalidEndpointOrModel.NotFound`. They appear in Ark's `/models` catalogue but are closed to new
+subscriptions. **Do not chase these again.**
+
+Taken from Ark: `Doubao-Seed-2.0-mini`, `Doubao-Seed-2.0-pro`, `Doubao-Seed-2.1-turbo` — one per
+intelligence class. Skipped `seed-2-0-lite` (redundant with mini), `seed-2-1-pro` and
+`seed-evolving` (13-17 min per assessment for a 4th and 5th 2026 Chinese model), and `glm-5-2`.
+
+## DashScope rescued what Volcano could not (2026-08-03)
+
+Probing alternate routes after the Ark dead end:
+
+| model | route | note |
+|---|---|---|
+| `DeepSeek-Chat` | `deepseek-v3` on DashScope | was written off as dead; **has DAT data**, so this restores a pairing |
+| `DeepSeek-V3.2` | `deepseek-v3.2` on DashScope | Tencent gateway rejects DeepSeek's own service ids |
+| `DeepSeek-R1` | `deepseek-r1` on DashScope | recovered earlier, same story |
+| `DeepSeek-V3.1` | `deepseek-v3.1` on DashScope | new, fills the gap between V3 and V3.2 |
+
+Lesson: when a vendor retires a model from its own API, check the Chinese cloud gateways
+individually. Tencent, Alibaba and Volcano host overlapping but different subsets, under different
+ids, and being absent from one says nothing about the others.
 
 ## Open items
 
