@@ -48,28 +48,28 @@ ITEMS_BASE = os.environ.get("RUGU_API_BASE", "https://api-v2.rugu.io")
 ITEMS_PATH = "/api/cat/"
 
 # --- prompt --------------------------------------------------------------------------------
-# VERBATIM participant-facing instruction text, reassembled from the CAT frontend component
-# (Module-Federation apps/cat/src/translations/en.json, branch dev--test-environment).
-# The rules are the instrument and are not paraphrased. Two mechanical edits only, both forced
-# by single-item delivery: "each of the 10 word pairs" -> "the following word pair", and the
-# output instruction asks for one word instead of a comma-separated list of ten.
+# v2, written by Dawei 2026-08-03. Second-person restatement of the CAT instructions for
+# single-item, single-call delivery. Differences from the participant-facing UI text, on purpose:
+#   - no "Convergent Association Task" heading (models should not be primed with the task name)
+#   - the cue words are named inline instead of shown as a card below the instructions
+#   - each rule is phrased as "Your word must ..." rather than an example label
+#   - the UI's fifth rule, "Do not rely on objects in your surroundings", is dropped as inert
+#     for a model with no surroundings
+# The instrument's substance is unchanged: similar to BOTH cues, one lowercase English word,
+# no proper nouns, no specialist terms.
 # ENGLISH ONLY (locked 2026-08-01, Dawei): the zh-Hans arm is not collected.
 ITEM_PROMPT_TEMPLATE = (
-    "Convergent Association Task\n\n"
-    "Please enter a word that is as similar as possible, in all meanings and uses to the "
-    "following word pair.\n\n"
-    "Detailed Rules\n"
-    "- A - B: Try to be close to both words, not just one.\n"
-    "- Apple: Only single, lowercase words in English\n"
-    "- Disneyland: No proper nouns (e.g. no specific people or places)\n"
-    "- GPA: No specialized vocabulary or technical terms\n"
-    "- Computer: Do not rely on objects in your surroundings\n\n"
-    "{left} / {right}\n\n"
-    "Return only that single word. Do not return anything else."
+    "Generate a word that is as similar as possible, in all meanings and uses to the word pair "
+    "\"{left}\" and \"{right}\".\n\n"
+    "- Your word must be similar to both of these words.\n"
+    "- Your word must be a single, lowercase word in English.\n"
+    "- Your word must not be a proper noun (i.e., no specific people or places).\n"
+    "- Your word must not be a specialized vocabulary or technical term.\n\n"
+    "Return only the single word you generated. Do not return anything else."
 )
 # Bump this whenever ITEM_PROMPT_TEMPLATE changes. The rules ARE the instrument, so a wording
 # change is a measure change and every row must say which wording it saw.
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 
 def build_item_prompt(left, right):
     return ITEM_PROMPT_TEMPLATE.format(left=left, right=right)
