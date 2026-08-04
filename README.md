@@ -123,9 +123,19 @@ word can always be diagnosed from the row alone.
 python machine_data/data_collection.py --model "GPT-4.1-mini" --api-model gpt-4.1-mini \
   --provider openai --n 1 --dry-run
 
-# full run: n assessments per model, all lanes in parallel, resumable
-# n defaults to 100 — locked 2026-08-03; see machine_data/MODEL_LINEUP.md
+# full run: TWO PASSES. n defaults to 100 — locked 2026-08-03; see machine_data/MODEL_LINEUP.md
+#
+# pass 1, the fast 61 models:
 python machine_data/data_collection.py --parallel --assessment-concurrency 10 --item-concurrency 5
+#
+# pass 2, the eight slow reasoning models (Kimi-K3/K2.5/K2.6, Qwen3.5-Plus, MiniMax-M2.7/M3,
+# DeepSeek-V4-Flash, Doubao-Seed-2.1-turbo). They time out at 600s with 5 items in flight; give
+# them all ten and a 30-minute deadline. Flagged SLOW in models.csv notes.
+python machine_data/data_collection.py --parallel --only qwen,moonshot,hunyuan,doubao \
+  --item-concurrency 10 --assessment-timeout 1800 --assessment-concurrency 4
+
+# ONE collector per output directory. Resumability counts rows, it does not lock the file:
+# two overlapping runs will both decide a model needs work and collect it twice.
 ```
 
 `--n` counts assessments; each is 10 calls. Runs are resumable per model: existing rows in the

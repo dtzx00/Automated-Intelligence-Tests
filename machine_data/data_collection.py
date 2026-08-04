@@ -318,8 +318,9 @@ def call_once(provider, key, api_model, prompt, target_temp):
     call-to-call at these temperatures anyway. Every model now runs on its provider's default
     sampling at the lane midpoint temperature."""
     fn = PROVIDERS[provider][0]
+    label = "provider default" if target_temp is None else target_temp
     try:
-        return fn(key, api_model, prompt, target_temp), target_temp
+        return fn(key, api_model, prompt, target_temp), label
     except urllib.error.HTTPError as e:
         body = ""
         try: body = e.read().decode()
@@ -473,6 +474,11 @@ def _append(path, fields, rows):
 
 def write_assessment(out_csv, row):
     _append(out_csv, FIELDS, [row])
+
+# Reasoning traces blow past Python's default 128 KiB CSV field cap — DeepSeek-V4-Flash wrote
+# 827,556 characters of reasoning for ONE assessment. Without this, reading our own output back
+# raises _csv.Error and every resume of a reasoning-heavy model dies before it can count its rows.
+csv.field_size_limit(sys.maxsize)
 
 def existing_count(out_csv, model_name):
     """Assessments already collected for this model that carry at least one parsed word.

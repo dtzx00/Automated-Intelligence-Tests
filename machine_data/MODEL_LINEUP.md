@@ -11,15 +11,15 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 | status | meaning | count |
 |---|---|---|
-| `live` | collected | **75** |
+| `live` | collected | **69** |
 | `blocked` | reachable model, our account cannot call it yet | 2 |
-| `dead` | no API on any key we hold | 13 |
+| `dead` | no API on any key we hold | 19 |
 | `dropped` | reachable, excluded on purpose | 2 |
 | | rows in the file | 92 |
 
-Live by lane: `openai` 33, `qwen` 11, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
-Live by region: Western 48, Eastern 27.
-Live by release year: 2023 4, 2024 9, 2025 26, 2026 36.
+Live by lane: `openai` 27, `qwen` 11, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
+Live by region: Western 42, Eastern 27.
+Live by release year: 2023 4, 2024 9, 2025 22, 2026 34.
 
 Only `live` rows are collected, so a `blocked` model is skipped rather than attempted and failed.
 The 2 blocked rows clear the moment Dawei's Alibaba entitlements come through.
@@ -111,10 +111,16 @@ Each of these was checked with a real call. Reasons are in the registry's `notes
 - `Qwen-Max-1201` — HTTP 429 model quota on this DashScope account; needs a quota raise from Dawei. Not attempted until then.
 - `Qwen-Turbo-2024-11` — HTTP 403 access denied on this DashScope account; needs an access request from Dawei. Not attempted until then.
 
-**dead (13)**
+**dead (19)**
+- `o1-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
+- `o3-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
 - `Qwen-72B-Chat` — add-old — 
 - `Qwen1.5-72B-Chat` — add-old — 
 - `Qwen2-72B-Instruct` — add-old — 72b not served; 57b is
+- `GPT-5-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
+- `GPT-5.2-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
+- `GPT-5.4-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
+- `GPT-5.5-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
 - `Claude-3-Opus` — retired by Anthropic; claude-3-opus-20240229 not served, and Anthropic now lists only 11 models
 - `Claude-3-Haiku` — retired by Anthropic
 - `Claude-3.5-Sonnet` — retired by Anthropic
@@ -162,3 +168,26 @@ under an hour with assessments running 10-deep.
 
 **DO NOT START COLLECTION** until Dawei says so (his instruction, 2026-08-03). Release dates for
 the 30 additions are still unverified, and provider `created` timestamps are not release dates.
+
+
+## Verification run, 2026-08-03 (n=2 per model, 1,890 calls)
+
+Every live model was given 2 assessments to shake out the production settings.
+
+- **69 of 75 collected cleanly.** Overall 1,266 of 1,890 words parsed; excluding the six pro-tier
+  models and the eight slow ones, parse rate is effectively 100%.
+- **The six OpenAI `*-pro` models are Responses-API only** — `404 This is not a chat model` /
+  `only supported in v1/responses`. The reviewer predicted this and was right. Marked dead.
+  They wrote rows with zero words, which is why the run log said `+2 (done)`: a written row is not
+  a collected answer, and the 3-strikes rule only fires on three CONSECUTIVE empties.
+- **Eight models time out at a 600s deadline with item-concurrency 5**: Kimi-K3, Kimi-K2.5,
+  Kimi-K2.6, Qwen3.5-Plus, MiniMax-M2.7, MiniMax-M3, DeepSeek-V4-Flash, Doubao-Seed-2.1-turbo.
+  They need the slow pass: `--item-concurrency 10 --assessment-timeout 1800`.
+- **Timing:** median assessment 4s; 224 hours of serial time for n=100 across all models, almost
+  all of it in the slow eight. With lanes, models and assessments in parallel the fast 61 finish in
+  well under an hour.
+- **Two bugs found and fixed by running it** (see the commit): the CSV field-size limit crash and
+  the `mixed:None/provider default` temperature label.
+- **Do not run two collectors against the same output directory.** Six models have more than 2
+  assessments because a detached run and a foreground run overlapped. Resumability counts rows; it
+  does not lock the file.

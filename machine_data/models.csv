@@ -23,29 +23,29 @@
 22,Qwen-Plus,qwen,,Eastern,hybrid,No,qwen-plus,alias,2025-12-01,alias_unresolved,no,latest pinned snapshot qwen-plus-2025-12-01 at collection,77.8874,live,,10,2996
 23,GPT-5.2,openai,,Western,hybrid,Yes,gpt-5.2-2025-12-11,pinned,2025-12-09,exact,yes,openai /v1/models created,79.5105,live,,10,2031
 24,Qwen3-Max,qwen,,Eastern,hybrid,Yes,qwen3-max-2026-01-23,pinned,2026-01-23,exact,no,api id actually called: qwen3-max-2026-01-23 (pinned snapshot; renamed from 'Qwen4-Max' 2026-07-29 to match what answered),76.4485,live,,10,3039
-25,Kimi-K2.5,moonshot,,Eastern,all-rounder,No,kimi-k2.5,alias,2026-01-27,exact,no,zdnet.com/article/moonshot-kimi-k2-5-model + Baidu Baike (2026-01-27),79.4300,live,,10,553653
+25,Kimi-K2.5,moonshot,,Eastern,all-rounder,No,kimi-k2.5,alias,2026-01-27,exact,no,zdnet.com/article/moonshot-kimi-k2-5-model + Baidu Baike (2026-01-27),79.4300,live,SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,10,553653
 26,MiniMax-M2.5,minimax,,Eastern,reasoning,Yes,minimax-m2.5,alias,2026-02-12,exact,no,minimax.io/blog/minimax-m25 (announcement 2026-02-12),75.5865,live,,10,391843
-27,Qwen3.5-Plus,qwen,,Eastern,hybrid,No,qwen3.5-plus,alias,2026-02-15,exact,no,earliest pinned DashScope snapshot qwen3.5-plus-2026-02-15,72.8309,live,,10,713254
+27,Qwen3.5-Plus,qwen,,Eastern,hybrid,No,qwen3.5-plus,alias,2026-02-15,exact,no,earliest pinned DashScope snapshot qwen3.5-plus-2026-02-15,72.8309,live,SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,10,713254
 28,Claude-Sonnet-4.6,anthropic,,Western,hybrid,No,claude-sonnet-4-6,alias,2026-02-17,exact,yes,anthropic /v1/models created_at,79.9676,live,,10,27878
 29,GPT-5.4,openai,,Western,hybrid,No,gpt-5.4-2026-03-05,pinned,2026-03-04,exact,yes,openai /v1/models created,76.7915,live,,10,2149
 30,Grok-4.20-nonreason,xai,,Western,all-rounder,No,grok-4.20-0309-non-reasoning,pinned,2026-03-09,exact,yes,xai /v1/models created,73.9793,live,,10,1025
 31,Grok-4.20-reason,xai,,Western,reasoning,Yes,grok-4.20-0309-reasoning,pinned,2026-03-09,exact,yes,xai /v1/models created,75.9158,live,,2,95187
-32,MiniMax-M2.7,minimax,,Eastern,reasoning,Yes,minimax-m2.7,alias,2026-03-18,exact,no,minimax.io/news/minimax-m27-en + platform release notes (2026-03-18),77.8586,live,hung >25min on one assessment in the 2026-08-03 shakedown; needs --assessment-timeout,,
+32,MiniMax-M2.7,minimax,,Eastern,reasoning,Yes,minimax-m2.7,alias,2026-03-18,exact,no,minimax.io/news/minimax-m27-en + platform release notes (2026-03-18),77.8586,live,hung >25min on one assessment in the 2026-08-03 shakedown; needs --assessment-timeout; SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,,
 33,Claude-Opus-4.7,anthropic,,Western,hybrid,Yes,claude-opus-4-7,alias,2026-04-14,exact,yes,anthropic /v1/models created_at,85.8920,live,,10,9375
 34,Grok-4.3,xai,,Western,hybrid,Yes,grok-4.3,alias,2026-04-17,exact,yes,xai /v1/models created,76.5504,live,,10,36701
-35,Kimi-K2.6,moonshot,,Eastern,reasoning,Yes,kimi-k2.6,alias,2026-04-21,exact,no,forum.moonshot.ai/t/meet-kimi-k2-6 (2026-04-21),78.5548,live,hung >25min on one assessment in the 2026-08-03 shakedown; needs --assessment-timeout,,
+35,Kimi-K2.6,moonshot,,Eastern,reasoning,Yes,kimi-k2.6,alias,2026-04-21,exact,no,forum.moonshot.ai/t/meet-kimi-k2-6 (2026-04-21),78.5548,live,hung >25min on one assessment in the 2026-08-03 shakedown; needs --assessment-timeout; SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,,
 36,GPT-5.5,openai,,Western,hybrid,Yes,gpt-5.5-2026-04-23,pinned,2026-04-22,exact,yes,openai /v1/models created,78.1195,live,,10,103144
-37,DeepSeek-V4-Flash,deepseek,,Eastern,efficient,No,deepseek-v4-flash,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24),73.9544,live,,10,895137
+37,DeepSeek-V4-Flash,deepseek,,Eastern,efficient,No,deepseek-v4-flash,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24),73.9544,live,SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,10,895137
 38,DeepSeek-V4-Flash-TH,deepseek,hunyuan,Eastern,efficient,No,deepseek-v4-flash,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24),73.5894,live,"same weights as DeepSeek-V4-Flash, served through the Tencent TokenHub gateway instead of DeepSeek's own API. TH = TokenHub, NOT thinking mode. Deliberate duplicate: it measures serving-stack differences for one model.",10,159530
-39,DeepSeek-V4-Pro,deepseek,,Eastern,reasoning,Yes,deepseek-v4-pro,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24),77.3413,live,,10,621537
+39,DeepSeek-V4-Pro,deepseek,,Eastern,reasoning,Yes,deepseek-v4-pro,alias,2026-04-24,exact,no,api-docs.deepseek.com/updates (2026-04-24),77.3413,live,SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,10,621537
 40,Qwen3.7-Max,qwen,,Eastern,hybrid,Yes,qwen3.7-max,alias,2026-05-17,exact,no,earliest pinned DashScope snapshot qwen3.7-max-2026-05-17,77.5067,live,,10,352032
-41,MiniMax-M3,minimax,,Eastern,reasoning,Yes,minimax-m3,alias,2026-06-01,exact,no,platform.minimax.io/docs/release-notes/models (Jun 1 2026),78.4807,live,,10,992003
+41,MiniMax-M3,minimax,,Eastern,reasoning,Yes,minimax-m3,alias,2026-06-01,exact,no,platform.minimax.io/docs/release-notes/models (Jun 1 2026),78.4807,live,SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,10,992003
 42,Claude-Fable-5,anthropic,,Western,hybrid,Yes,claude-fable-5,alias,2026-06-07,exact,yes,anthropic /v1/models created_at,83.4856,live,,10,13537
 43,GPT-5.6-Sol,openai,,Western,hybrid,Yes,gpt-5.6-sol,alias,2026-06-23,exact,yes,openai /v1/models created,80.4182,live,,10,52418
 44,Claude-Sonnet-5,anthropic,,Western,hybrid,No,claude-sonnet-5,alias,2026-06-29,exact,yes,anthropic /v1/models created_at,81.1623,live,,10,11431
 45,Grok-4.5,xai,,Western,hybrid,Yes,grok-4.5,alias,2026-06-29,exact,yes,xai /v1/models created,75.9292,live,,10,190388
 46,Hunyuan-Hy3,tencent,,Eastern,hybrid,No,hy3,alias,2026-07-06,exact,no,tencent.com Hy3 GA announcement (2026-07-06); preview was 2026-04-23,77.5208,live,,10,3069
-47,Kimi-K3,moonshot,,Eastern,reasoning,Yes,kimi-k3,alias,2026-07-16,exact,no,published announcement / dataset,77.5552,live,,10,965080
+47,Kimi-K3,moonshot,,Eastern,reasoning,Yes,kimi-k3,alias,2026-07-16,exact,no,published announcement / dataset,77.5552,live,SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,10,965080
 48,Claude-Opus-5,anthropic,,Western,hybrid,Yes,claude-opus-5,alias,2026-07-24,exact,yes,anthropic /v1/models created_at,84.3003,live,,10,34915
 49,GPT-4,openai,,Western,all-rounder,No,gpt-4,snapshot,2023-03-14,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — original GPT-4,10,2940
 50,GPT-4-0613,openai,,Western,all-rounder,No,gpt-4-0613,snapshot,2023-06-13,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — June 2023 snapshot,10,3285
@@ -55,9 +55,9 @@
 54,GPT-4o-mini,openai,,Western,efficient,No,gpt-4o-mini-2024-07-18,snapshot,2024-07-18,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,10,2030
 55,o1,openai,,Western,reasoning,Yes,o1-2024-12-17,snapshot,2024-12-17,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — first reasoning model,9,53017
 56,o3-mini,openai,,Western,reasoning,Yes,o3-mini-2025-01-31,snapshot,2025-01-31,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,10,24573
-57,o1-pro,openai,,Western,reasoning,Yes,o1-pro-2025-03-19,snapshot,2025-03-19,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,,
+57,o1-pro,openai,,Western,reasoning,Yes,o1-pro-2025-03-19,snapshot,2025-03-19,UNVERIFIED,no,PENDING VERIFICATION,,dead,Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.,0,
 58,o3,openai,,Western,reasoning,Yes,o3-2025-04-16,snapshot,2025-04-16,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,10,81736
-59,o3-pro,openai,,Western,reasoning,Yes,o3-pro-2025-06-10,snapshot,2025-06-10,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,,
+59,o3-pro,openai,,Western,reasoning,Yes,o3-pro-2025-06-10,snapshot,2025-06-10,UNVERIFIED,no,PENDING VERIFICATION,,dead,Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.,0,
 60,Qwen-Max-1201,qwen,,Eastern,hybrid,No,qwen-max-1201,snapshot,2023-12-01,UNVERIFIED,no,PENDING VERIFICATION,,blocked,HTTP 429 model quota on this DashScope account; needs a quota raise from Dawei. Not attempted until then.,0,94948
 61,Qwen-72B-Chat,qwen,,Eastern,hybrid,No,qwen-72b-chat,alias,2023-11-30,UNVERIFIED,no,PENDING VERIFICATION,,dead,add-old — ,0,1763
 62,Qwen1.5-72B-Chat,qwen,,Eastern,hybrid,No,qwen1.5-72b-chat,alias,2024-02-04,UNVERIFIED,no,PENDING VERIFICATION,,dead,add-old — ,0,1433
@@ -65,21 +65,21 @@
 64,Qwen-Turbo-2024-11,qwen,,Eastern,efficient,No,qwen-turbo-2024-11-01,snapshot,2024-11-01,UNVERIFIED,no,PENDING VERIFICATION,,blocked,HTTP 403 access denied on this DashScope account; needs an access request from Dawei. Not attempted until then.,0,24071
 65,Moonshot-v1-32k,moonshot,,Eastern,all-rounder,No,moonshot-v1-32k,snapshot,2024-02-01,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — completes the v1 family,10,2550
 66,GPT-5-nano,openai,,Western,efficient,No,gpt-5-nano-2025-08-07,snapshot,2025-08-07,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,10,57904
-67,GPT-5-pro,openai,,Western,reasoning,Yes,gpt-5-pro-2025-10-06,snapshot,2025-10-06,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,,
-68,GPT-5.2-pro,openai,,Western,reasoning,Yes,gpt-5.2-pro-2025-12-11,snapshot,2025-12-11,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,,
+67,GPT-5-pro,openai,,Western,reasoning,Yes,gpt-5-pro-2025-10-06,snapshot,2025-10-06,UNVERIFIED,no,PENDING VERIFICATION,,dead,Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.,0,
+68,GPT-5.2-pro,openai,,Western,reasoning,Yes,gpt-5.2-pro-2025-12-11,snapshot,2025-12-11,UNVERIFIED,no,PENDING VERIFICATION,,dead,Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.,0,
 69,GPT-5.4-mini,openai,,Western,efficient,No,gpt-5.4-mini-2026-03-17,snapshot,2026-03-17,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,10,2931
-70,GPT-5.4-pro,openai,,Western,reasoning,Yes,gpt-5.4-pro-2026-03-05,snapshot,2026-03-05,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,,
-71,GPT-5.5-pro,openai,,Western,reasoning,Yes,gpt-5.5-pro-2026-04-23,snapshot,2026-04-23,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,,
+70,GPT-5.4-pro,openai,,Western,reasoning,Yes,gpt-5.4-pro-2026-03-05,snapshot,2026-03-05,UNVERIFIED,no,PENDING VERIFICATION,,dead,Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.,0,
+71,GPT-5.5-pro,openai,,Western,reasoning,Yes,gpt-5.5-pro-2026-04-23,snapshot,2026-04-23,UNVERIFIED,no,PENDING VERIFICATION,,dead,Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.,0,
 72,GPT-5.6-Luna,openai,,Western,reasoning,Yes,gpt-5.6-luna,alias,2026-06-23,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — sibling of Sol,10,30024
 73,GPT-5.6-Terra,openai,,Western,reasoning,Yes,gpt-5.6-terra,alias,2026-06-23,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — sibling of Sol,10,10998
 74,Claude-Opus-4.6,anthropic,,Western,reasoning,Yes,claude-opus-4-6,snapshot,2026-02-04,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,10,6073
 75,Claude-Opus-4.8,anthropic,,Western,reasoning,Yes,claude-opus-4-8,snapshot,2026-05-28,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,10,4909
 76,GLM-5,zhipu,hunyuan,Eastern,reasoning,Yes,glm-5,snapshot,2026-02-10,UNVERIFIED,no,PENDING VERIFICATION,,dropped,"dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart",1,208023
 77,GLM-5.2,zhipu,hunyuan,Eastern,reasoning,Yes,glm-5.2,snapshot,2026-06-15,UNVERIFIED,no,PENDING VERIFICATION,,dropped,"dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart",4,303265
-78,MiniMax-M2.1,minimax,qwen,Eastern,reasoning,Yes,MiniMax-M2.1,snapshot,2026-02-13,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — fills the M2 line,10,432837
+78,MiniMax-M2.1,minimax,qwen,Eastern,reasoning,Yes,MiniMax-M2.1,snapshot,2026-02-13,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — fills the M2 line; SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,10,432837
 79,Doubao-Seed-2.0-mini,bytedance,doubao,Eastern,efficient,Yes,doubao-seed-2-0-mini-260428,snapshot,2026-04-28,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: Volcano Ark; new vendor (ByteDance),,
 80,Doubao-Seed-2.0-pro,bytedance,doubao,Eastern,hybrid,Yes,doubao-seed-2-0-pro-260215,snapshot,2026-02-15,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: Volcano Ark; new vendor (ByteDance),,
-81,Doubao-Seed-2.1-turbo,bytedance,doubao,Eastern,reasoning,Yes,doubao-seed-2-1-turbo-260628,snapshot,2026-06-28,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: Volcano Ark; new vendor (ByteDance),,
+81,Doubao-Seed-2.1-turbo,bytedance,doubao,Eastern,reasoning,Yes,doubao-seed-2-1-turbo-260628,snapshot,2026-06-28,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: Volcano Ark; new vendor (ByteDance); SLOW: collect in the slow pass (--item-concurrency 10 --assessment-timeout 1800); timed out at 600s with item-concurrency 5 on 2026-08-03,,
 82,DeepSeek-V3.1,deepseek,qwen,Eastern,all-rounder,No,deepseek-v3.1,alias,2025-08-21,UNVERIFIED,yes,PENDING VERIFICATION,,live,add: DashScope; fills the DeepSeek line between V3 and V3.2,,
 83,Claude-3-Opus,anthropic,,Western,hybrid,No,,,2024-03-04,exact,no,carried from DAT,,dead,"retired by Anthropic; claude-3-opus-20240229 not served, and Anthropic now lists only 11 models",,
 84,Claude-3-Haiku,anthropic,,Western,efficient,No,,,2024-03-13,exact,no,carried from DAT,,dead,retired by Anthropic,,
