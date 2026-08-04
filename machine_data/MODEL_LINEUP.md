@@ -11,17 +11,18 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 | status | meaning | count |
 |---|---|---|
-| `live` | collected | **71** |
+| `live` | collected | **73** |
 | `blocked` | reachable model, our account cannot call it yet | 4 |
 | `dead` | no API on any key we hold | 13 |
-| `dropped` | reachable, excluded on purpose | 4 |
+| `dropped` | reachable, excluded on purpose | 2 |
 | | rows in the file | 92 |
 
-Live by lane: `openai` 27, `qwen` 11, `anthropic` 11, `openai_responses` 6, `moonshot` 5, `xai` 4, `hunyuan` 3, `deepseek` 2, `doubao` 2.
-Live by region: Western 48, Eastern 23.
-Live by release year: 2023 4, 2024 9, 2025 26, 2026 32.
+Live by lane: `openai` 27, `qwen` 11, `anthropic` 11, `moonshot` 6, `openai_responses` 6, `xai` 4, `hunyuan` 3, `doubao` 3, `deepseek` 2.
+Live by region: Western 48, Eastern 25.
+Live by release year: 2023 4, 2024 9, 2025 26, 2026 34.
 
 Only `live` rows are collected, so a `blocked` model is skipped rather than attempted and failed.
+2 live models carry `pace_exempt=yes`: `Kimi-K3`, `Doubao-Seed-2.1-turbo`.
 
 ## Shakedown, 2026-08-03 — 72 models, 1 assessment each, 700 calls
 
@@ -127,11 +128,9 @@ Each of these was checked with a real call. Reasons are in the registry's `notes
 - `Llama4-Scout` — no host on any key we hold; would need OpenRouter
 - `Ernie-4.0-8k` — no host on any key we hold
 
-**dropped (4)**
-- `Kimi-K3` — FAILS THE 5-MINUTE RULE. Measured 2026-08-04 off Beijing peak: 5 of 10 words hit the 300s cap, mean 161s for the ones that landed. NOTE this one costs a paired observation — it has DAT 77.5552. Re-add only if the provider gets faster.
+**dropped (2)**
 - `GLM-5` — dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart
 - `GLM-5.2` — dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart
-- `Doubao-Seed-2.1-turbo` — FAILS THE 5-MINUTE RULE. Measured 2026-08-04 off Beijing peak: 7 of 10 words hit the 300s cap, mean 226s for a word that did land, 664s and 40,192 reasoning tokens on a single probe. No DAT counterpart, so dropping costs no paired observation.
 
 Also listed in Volcano Ark's catalogue but closed to subscription, so unreachable however the
 lineup changes: `kimi-k2-250711`, `deepseek-v3-241226`, `deepseek-r1-250120`,
@@ -258,11 +257,31 @@ Enforced in code, not by convention:
 | Qwen3.5-Plus | 8 | 2 | 149s | keep, flagged |
 | DeepSeek-V4-Flash | 10 | 0 | 155s | keep |
 | Kimi-K2.6 | 6 | 4 | 216s | keep, flagged |
-| **Kimi-K3** | 5 | **5** | 161s | **dropped** |
-| **Doubao-Seed-2.1-turbo** | 3 | **7** | 226s | **dropped** |
-
-Dropping Kimi-K3 costs a paired observation — it has a DAT score (77.5552). Doubao-Seed-2.1-turbo
-has no DAT counterpart, so it costs nothing.
+| Kimi-K3 | 5 | 5 | 161s | **over the rule, kept — `pace_exempt`** |
+| Doubao-Seed-2.1-turbo | 3 | 7 | 226s | **over the rule, kept — `pace_exempt`** |
 
 DeepSeek-V4-Flash went 0-for-20 on 2026-08-03 and 10-for-10 at 155s a day later. That was
 Beijing-peak load, not the model. Measure Eastern providers off peak before judging them.
+
+### `pace_exempt` — keeping a model the clock says to drop
+
+Dawei, 2026-08-04: keep Kimi-K3 and Doubao-Seed-2.1-turbo. K3 drew a lot of attention on release,
+and a lineup that quietly omits the model everyone is talking about invites the question we least
+want to answer. Salience beats throughput here.
+
+`pace_exempt=yes` in models.csv suppresses the DROP for that model. It does **not** raise the cap:
+each word still gets 300s, so an exempt model costs the run no extra time and comes back with
+blanks where it was too slow. The run logs one `PACE <model>: over the 300s cap on N% of calls —
+kept anyway` line so the exemption is never silent.
+
+**What this costs, and it is not just precision.** At the cap, K3 returns about 5 words in 10 and
+Doubao-Seed-2.1-turbo about 3 in 10. So at n=100 they yield roughly 500 and 300 scored items
+against 1,000 for everyone else. Two consequences:
+
+1. **Noisier scores.** Running these two at n=200 restores a comparable number of scored items.
+2. **The blanks are not missing at random.** A word goes blank precisely when the model thought
+   longest about it, which is very likely the harder cue pairs — so the surviving items are the
+   easier ones, and their CAT proximity is biased UPWARD. This has to be checked, not assumed:
+   within models that complete every item, compare proximity on their slowest items against their
+   fastest, which gives the sign and rough size of the bias. Until that check exists, K3 and
+   Doubao-Seed-2.1-turbo carry a methods caveat and should not be read as clean point estimates.

@@ -51,6 +51,11 @@ CHECKS = [
      len({(d.resolve_lane(r), r["api_model_id"]) for r in live}) == len(live)),
     ("every temperature range belongs to a real lane",
      set(d.PROVIDER_TEMP_RANGE) <= set(d.PROVIDERS)),
+    ("pace_exempt values are known and each exempt model is documented",
+     lambda: all((r.get("pace_exempt") or "") in ("", "yes") for r in REG)
+             and all(r["status"] == "live" and "5-MINUTE RULE" in r["notes"].upper()
+                     for r in REG if r.get("pace_exempt") == "yes")
+             and all(f"`{r['model']}`" in LINEUP for r in REG if r.get("pace_exempt") == "yes")),
     ("status values are known",
      {r["status"] for r in rows} <= {"live", "dead", "dropped", "blocked"}),
     ("no live model is known-blocked (0/10 in the shakedown)",

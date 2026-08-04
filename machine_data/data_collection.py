@@ -686,10 +686,23 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop,
     def too_slow():
         """Dawei's rule, applied while the run is going: a model that spends more than five
         minutes on the average word is dropped, not waited for. Judged on completed calls once
-        there are enough of them, and on cap hits when nothing completes at all."""
+        there are enough of them, and on cap hits when nothing completes at all.
+
+        `pace_exempt` in models.csv overrides the drop for a model we want for reasons the clock
+        does not capture — Kimi-K3 is too prominent to be missing from the lineup. The exemption
+        stops the DROP only; the 300s per-word cap still applies, so an exempt model costs the run
+        nothing extra and simply comes back with blanks where it was too slow."""
         with pace_lock:
             calls, capped, secs, timed = pace["calls"], pace["capped"], pace["secs"], pace["timed"]
         if calls < 10: return ""
+        if (model_row.get("pace_exempt") or "").strip().lower() in ("yes","y","true","1"):
+            with pace_lock:
+                if pace.get("warned"): return ""
+                pace["warned"] = True
+            rate = 100 * capped / calls
+            print(f"PACE {name} ({prov}): over the {CALL_TIMEOUT_S:.0f}s cap on {rate:.0f}% of "
+                  f"calls — kept anyway (pace_exempt), expect blanks", flush=True)
+            return ""
         if timed >= 5 and secs / timed > CALL_TIMEOUT_S:
             return f"averages {secs/timed:.0f}s per word, over the {CALL_TIMEOUT_S:.0f}s cap"
         if capped / calls >= 0.5:
