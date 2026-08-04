@@ -14,8 +14,8 @@ DELIVERY: ONE API CALL PER WORD PAIR (locked 2026-08-03, Dawei)
   Note the one real divergence: a human accumulates memory across the 10 items and may revise
   earlier answers with the Previous button; independent calls cannot.
 
-OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessment, 64 columns:
-  14 assessment/model/API columns + 5 per item (cue left, cue right, word, request timestamp,
+OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessment, 63 columns:
+  13 assessment/model/API columns + 5 per item (cue left, cue right, word, request timestamp,
   response timestamp) x 10 items. Every field has its own column. raw_responses and reasoning
   each hold ten values as a JSON list, since a column per item for either would add twenty
   columns of long text.
@@ -94,7 +94,7 @@ def draw_items(rng=random):
             continue
         used.add(a); used.add(b)
         q.append((a, b) if rng.choice([True, False]) else (b, a))
-    return q, _now()
+    return q
 
 # --- prompt --------------------------------------------------------------------------------
 # v3, written by Dawei 2026-08-03. Second-person restatement of the CAT instructions for
@@ -151,7 +151,7 @@ def provider_midpoint(provider):
 # machine_data/models.csv is the single registry and joins on model_name.
 META_FIELDS = [
     "record_id", "model_name", "api_model_requested", "api_model_returned",
-    "provider", "vendor", "prompt_version", "temperature", "seed_base", "max_tokens",
+    "provider", "vendor", "prompt_version", "temperature", "max_tokens",
     "assessment_start_utc", "assessment_duration_ms",
     "raw_responses", "reasoning",
 ]
@@ -160,13 +160,6 @@ for _i in range(N_ITEMS):
     ITEM_FIELDS += [f"cue_{_i}_left", f"cue_{_i}_right", f"word_{_i}",
                     f"item_{_i}_request_utc", f"item_{_i}_response_utc"]
 FIELDS = META_FIELDS + ITEM_FIELDS
-
-def _collector_version():
-    try:
-        return "git:" + subprocess.check_output(["git","-C",str(HERE),"rev-parse","--short","HEAD"],text=True).strip()
-    except Exception:
-        return "git:unknown"
-COLLECTOR_VERSION = _collector_version()
 
 def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
@@ -194,12 +187,11 @@ def _post_full(url, headers, body, timeout=300):
 MAX_TOKENS_ANTHROPIC = 4000
 
 # ---- provider adapters ---------------------------------------------------------------------
-def _openai_like(base, key, api_model, prompt, temperature, seed=None, extra_headers=None):
+def _openai_like(base, key, api_model, prompt, temperature, extra_headers=None):
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     if extra_headers: headers.update(extra_headers)
     body = {"model": api_model, "messages": [{"role":"user","content":prompt}]}
     if temperature is not None: body["temperature"] = temperature   # None = omit, use model default
-    if seed is not None: body["seed"] = seed
     d, h = _post_full(f"{base}/chat/completions", headers, body)
     ch = (d.get("choices") or [{}])[0]
     usage = d.get("usage") or {}
@@ -219,7 +211,7 @@ def _openai_like(base, key, api_model, prompt, temperature, seed=None, extra_hea
         "endpoint_base": base, "max_tokens": "",
     }
 
-def _anthropic(base, key, api_model, prompt, temperature, seed=None):
+def _anthropic(base, key, api_model, prompt, temperature):
     headers = {"x-api-key": key, "anthropic-version":"2023-06-01", "Content-Type":"application/json"}
     body = {"model": api_model, "max_tokens":MAX_TOKENS_ANTHROPIC,
             "messages":[{"role":"user","content":prompt}]}
@@ -239,18 +231,19 @@ def _anthropic(base, key, api_model, prompt, temperature, seed=None):
         "max_tokens": MAX_TOKENS_ANTHROPIC,
     }
 
+# (adapter, env key). No third element: the old "supports seed" flag is gone with seeding itself.
 PROVIDERS = {
-    "openai":    (lambda k,m,p,t,s: _openai_like("https://api.openai.com/v1", k, m, p, t, s), "OPENAI_API_KEY", True),
-    "anthropic": (lambda k,m,p,t,s: _anthropic("https://api.anthropic.com/v1", k, m, p, t, s), "ANTHROPIC_API_KEY", False),
-    "xai":       (lambda k,m,p,t,s: _openai_like("https://api.x.ai/v1", k, m, p, t, None), "XAI_API_KEY", False),
-    "deepseek":  (lambda k,m,p,t,s: _openai_like("https://api.deepseek.com/v1", k, m, p, t, s), "DEEPSEEK_API_KEY", True),
-    "qwen":      (lambda k,m,p,t,s: _openai_like("https://dashscope.aliyuncs.com/compatible-mode/v1", k, m, p, t, s), "QWEN_API_KEY", True),
-    "hunyuan":   (lambda k,m,p,t,s: _openai_like("https://tokenhub.tencentmaas.com/v1", k, m, p, t, None), "HUNYUAN_API_KEY", False),
-    "moonshot":  (lambda k,m,p,t,s: _openai_like("https://api.moonshot.ai/v1", k, m, p, t, None), "MOONSHOT_API_KEY", False),
+    "openai":    (lambda k,m,p,t: _openai_like("https://api.openai.com/v1", k, m, p, t), "OPENAI_API_KEY"),
+    "anthropic": (lambda k,m,p,t: _anthropic("https://api.anthropic.com/v1", k, m, p, t), "ANTHROPIC_API_KEY"),
+    "xai":       (lambda k,m,p,t: _openai_like("https://api.x.ai/v1", k, m, p, t), "XAI_API_KEY"),
+    "deepseek":  (lambda k,m,p,t: _openai_like("https://api.deepseek.com/v1", k, m, p, t), "DEEPSEEK_API_KEY"),
+    "qwen":      (lambda k,m,p,t: _openai_like("https://dashscope.aliyuncs.com/compatible-mode/v1", k, m, p, t), "QWEN_API_KEY"),
+    "hunyuan":   (lambda k,m,p,t: _openai_like("https://tokenhub.tencentmaas.com/v1", k, m, p, t), "HUNYUAN_API_KEY"),
+    "moonshot":  (lambda k,m,p,t: _openai_like("https://api.moonshot.ai/v1", k, m, p, t), "MOONSHOT_API_KEY"),
     # Volcano Engine Ark (ByteDance). OpenAI-compatible. Serves Doubao plus third-party weights
     # (DeepSeek, Kimi, Qwen, GLM, Mistral) at their ORIGINAL dated snapshots, several of which are
     # no longer available from the vendors' own APIs.
-    "doubao":    (lambda k,m,p,t,s: _openai_like("https://ark.cn-beijing.volces.com/api/v3", k, m, p, t, None), "DOUBAO_API_KEY", False),
+    "doubao":    (lambda k,m,p,t: _openai_like("https://ark.cn-beijing.volces.com/api/v3", k, m, p, t), "DOUBAO_API_KEY"),
 }
 
 # ---- vendor -> API lane ---------------------------------------------------------------------
@@ -316,10 +309,17 @@ def parse_word(text):
             return w, "ok"
     return "", "failed"
 
-def call_once(provider, key, api_model, prompt, target_temp, seed):
+def call_once(provider, key, api_model, prompt, target_temp):
+    """One call. NO SEED IS EVER SENT (locked 2026-08-03, Dawei).
+
+    Only openai, deepseek and qwen accept a seed at all, so seeding meant three lanes ran under a
+    different sampling condition from the other five — an asymmetry across the 77-model lineup for
+    no gain, since every assessment draws different word pairs and nothing is reproducible
+    call-to-call at these temperatures anyway. Every model now runs on its provider's default
+    sampling at the lane midpoint temperature."""
     fn = PROVIDERS[provider][0]
     try:
-        return fn(key, api_model, prompt, target_temp, seed if PROVIDERS[provider][2] else None), target_temp
+        return fn(key, api_model, prompt, target_temp), target_temp
     except urllib.error.HTTPError as e:
         body = ""
         try: body = e.read().decode()
@@ -328,7 +328,7 @@ def call_once(provider, key, api_model, prompt, target_temp, seed):
             # Resending a NUMBER here was a no-op for every (0,2) lane, whose midpoint is already
             # 1.0. Omit the parameter instead: the model applies its own default, and we record
             # "provider default" rather than a temperature we did not send.
-            return fn(key, api_model, prompt, None, None), "provider default"
+            return fn(key, api_model, prompt, None), "provider default"
         raise RuntimeError(f"HTTP {e.code}: {body[:200]}")
 
 TRANSIENT_BITS = ("429", "timed out", "timeout", "temporarily", "connection", "reset",
@@ -337,13 +337,13 @@ def _is_transient(msg):
     m = msg.lower()
     return any(b.strip() in m for b in TRANSIENT_BITS)
 
-def call_item(provider, key, api_model, prompt, target_temp, seed, max_retries=6):
+def call_item(provider, key, api_model, prompt, target_temp, max_retries=6):
     """One call for one cue pair, with bounded retry on transient failures.
     Returns (payload|None, temp_used, retries, error_str)."""
     retries = 0
     while True:
         try:
-            payload, temp_used = call_once(provider, key, api_model, prompt, target_temp, seed)
+            payload, temp_used = call_once(provider, key, api_model, prompt, target_temp)
             return payload, temp_used, retries, ""
         except Exception as e:
             msg = str(e)
@@ -355,29 +355,38 @@ def call_item(provider, key, api_model, prompt, target_temp, seed, max_retries=6
 
 
 # ---- one assessment = 10 calls --------------------------------------------------------------
-def run_assessment(model_name, api_model, prov, meta, seed_base, batch, key,
-                   pairs=None, fetched_at=None, item_workers=1, deadline_s=1200):
+def run_assessment(model_name, api_model, prov, meta, batch, key,
+                   pairs=None, item_workers=1, deadline_s=1200):
     """Fetch 10 pairs (unless supplied), call the model once per pair, return one row.
 
     A failed call leaves its word blank and records "[ERROR: ...]" in raw_responses for that
     item. The other nine are still valid data, so the assessment is always kept.
     """
     if pairs is None:
-        pairs, fetched_at = draw_items()
+        pairs = draw_items()
     target_temp = provider_midpoint(prov)
-    # Seeds go only to lanes that accept them (openai, deepseek, qwen). Item i is sent
-    # seed_base*100+i, so recording seed_base alone reproduces all ten. Recorded blank for lanes
-    # that take no seed, so the column says what was SENT rather than what we intended to send.
-    seed_sent = seed_base if PROVIDERS[prov][2] else ""
     started = _now(); t_start = time.time()
     record_id = _record_id(model_name, batch, started)
 
+    expired = threading.Event()          # set when the assessment deadline passes
+    temp_lock = threading.Lock()
+    forced_default = [False]             # sticky: once one call drops the temperature, all do
+
     def one_item(i):
+        if expired.is_set():             # deadline passed before this item was dispatched
+            return i, _now(), _now(), None, "", "assessment deadline (not attempted)"
         left, right = pairs[i]
         prompt = build_item_prompt(left, right)
-        seed = seed_base * 100 + i
         req_ts = _now()
-        payload, temp_used, retries, err = call_item(prov, key, api_model, prompt, target_temp, seed)
+        with temp_lock:
+            t = None if forced_default[0] else target_temp
+        payload, temp_used, retries, err = call_item(prov, key, api_model, prompt, t)
+        if temp_used == "provider default":
+            # A provider that rejects its lane midpoint rejects it for every call, so make the
+            # fallback sticky. This guarantees one temperature per assessment instead of leaving
+            # the row's single temperature column to whichever item finished last.
+            with temp_lock:
+                forced_default[0] = True
         return i, req_ts, _now(), payload, temp_used, err
 
     # Items are independent by construction — each call is a fresh context — so running them
@@ -399,13 +408,24 @@ def run_assessment(model_name, api_model, prov, meta, seed_base, batch, key,
         try:
             results.append(fut.result(timeout=max(left, 0)))
         except cf.TimeoutError:
-            i = futs[fut]
-            results.append((i, _now(), _now(), None, "", f"assessment deadline {deadline_s}s"))
+            # Past the deadline, STOP SPENDING. Without this the queued items kept running and
+            # their answers were thrown away: measured at 8 billed-and-discarded calls per
+            # timeout, worst on exactly the models the deadline exists for.
+            expired.set()
+            for f in futs:
+                f.cancel()               # never-started items are dropped outright
+            for f, j in futs.items():
+                if f is fut or not f.done():
+                    results.append((j, _now(), _now(), None, "",
+                                    f"assessment deadline {deadline_s}s"))
+            break
     ex.shutdown(wait=False)
-    results.sort(key=lambda r: r[0])
+    seen = set()
+    results = [r for r in sorted(results, key=lambda r: r[0])
+               if not (r[0] in seen or seen.add(r[0]))]
 
     words, raws, reasonings, item_ts = [], [], [], []
-    api_model_returned = ""; temp_effective = ""; max_tokens = ""
+    api_model_returned = ""; max_tokens = ""; temps_used = set()
     for i, req_ts, resp_ts, payload, temp_used, err in results:
         if payload is None:
             words.append(""); raws.append(f"[ERROR: {err}]"); reasonings.append("")
@@ -415,15 +435,19 @@ def run_assessment(model_name, api_model, prov, meta, seed_base, batch, key,
             raws.append(payload["text"])
             reasonings.append(payload.get("reasoning_text", ""))
             api_model_returned = api_model_returned or payload.get("api_model_returned", "")
-            temp_effective = temp_used
+            temps_used.add(temp_used)
             max_tokens = payload.get("max_tokens", "") or max_tokens
         item_ts.append((req_ts, resp_ts))
 
+    # The sticky fallback should make this a single value always. "mixed" is an alarm, not an
+    # expected state: it means a provider rejected the temperature intermittently.
+    temp_effective = (temps_used.pop() if len(temps_used) == 1
+                      else ("" if not temps_used else "mixed:" + "/".join(map(str, sorted(map(str, temps_used))))))
     row = {
         "record_id": record_id, "model_name": model_name, "api_model_requested": api_model,
         "api_model_returned": api_model_returned, "provider": prov,
         "vendor": meta.get("vendor", ""), "prompt_version": PROMPT_VERSION,
-        "temperature": temp_effective, "seed_base": seed_sent, "max_tokens": max_tokens,
+        "temperature": temp_effective, "max_tokens": max_tokens,
         "assessment_start_utc": started,
         "assessment_duration_ms": int((time.time() - t_start) * 1000),
         "raw_responses": json.dumps(raws, ensure_ascii=False),
@@ -442,7 +466,7 @@ def _append(path, fields, rows):
     if not rows: return
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists()
-    with open(path, "a", newline="") as f:
+    with open(path, "a", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         if not exists: w.writeheader()
         w.writerows(rows)
@@ -457,7 +481,7 @@ def existing_count(out_csv, model_name):
     but counting them would let a model that fails every parse look progressively 'more done' on
     each resume, and quietly stop retrying while producing nothing."""
     if not out_csv.exists(): return 0
-    with open(out_csv) as f:
+    with open(out_csv, encoding="utf-8") as f:
         return sum(1 for r in csv.DictReader(f)
                    if r["model_name"] == model_name
                    and any(r.get(f"word_{i}") for i in range(N_ITEMS)))
@@ -473,7 +497,7 @@ def load_live(models_csv, only=None):
     """Group models by resolved API lane. Models with no known lane are reported, never dropped
     silently — a missing endpoint must be fixed, not skipped."""
     lanes, unrouted = {}, []
-    for r in csv.DictReader(open(models_csv)):
+    for r in csv.DictReader(open(models_csv, encoding="utf-8")):
         if (r.get("status") or "live").strip().lower() != "live": continue
         lane = resolve_lane(r)
         if lane not in PROVIDERS:
@@ -539,13 +563,12 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop,
     if prog: prog.start_model(name, have)
     lk = write_lock(str(out_csv))
     dead = 0
-    counter = threading.Lock()
 
     def one_assessment(seq):
-        pairs, fetched_at = draw_items()
+        pairs = draw_items()
         gate.wait()
-        row = run_assessment(name, api, prov, meta, 1000 + seq, batch, key,
-                             pairs=pairs, fetched_at=fetched_at, item_workers=item_workers,
+        row = run_assessment(name, api, prov, meta, batch, key,
+                             pairs=pairs, item_workers=item_workers,
                              deadline_s=deadline_s)
         with lk: write_assessment(out_csv, row)
         return row
@@ -564,8 +587,7 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop,
                 for fut in done:
                     pending.pop(fut)
                     row = fut.result()
-                    with counter:
-                        made += 1
+                    made += 1
                     if prog: prog.tick(name)
                     if not any(row[f"word_{i}"] for i in range(N_ITEMS)):
                         dead += 1
@@ -615,6 +637,13 @@ def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop,
                                             assess_workers=assess_workers, deadline_s=deadline_s)
                 results.append((name, got, st))
                 print(f"  [{prov}] {name}: +{got} ({st})", flush=True)
+            except Exception as e:
+                # A bug in the collector must not read as "collected cleanly". It did once: an
+                # unpacking error killed every assessment and the run still printed
+                # "No models skipped".
+                results.append((m["model"], 0, f"error:collector crash: {type(e).__name__}: {e}"))
+                print(f"  [{prov}] {m['model']}: CRASHED — {type(e).__name__}: {e}", flush=True)
+                if prog: prog.finish(m["model"])
             finally:
                 q.task_done()
     ts = [threading.Thread(target=worker, daemon=True) for _ in range(max(1,concurrency))]
@@ -663,7 +692,7 @@ def generate(model_name, api_model, provider, n, out_csv, meta,
     if not key: sys.exit(f"Missing env key {PROVIDERS[provider][1]} for provider {provider}")
     made = 0
     while made < n:
-        row = run_assessment(model_name, api_model, provider, meta, 1000 + made, batch,
+        row = run_assessment(model_name, api_model, provider, meta, batch,
                              key, item_workers=item_workers, deadline_s=deadline_s)
         made += 1
         if dry_run:

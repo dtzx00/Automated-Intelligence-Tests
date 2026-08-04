@@ -11,14 +11,18 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 | status | meaning | count |
 |---|---|---|
-| `live` | collected | **77** |
+| `live` | collected | **75** |
+| `blocked` | reachable model, our account cannot call it yet | 2 |
 | `dead` | no API on any key we hold | 13 |
 | `dropped` | reachable, excluded on purpose | 2 |
 | | rows in the file | 92 |
 
-Live by lane: `openai` 33, `qwen` 13, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
-Live by region: Western 48, Eastern 29.
-Live by release year: 2023 5, 2024 10, 2025 26, 2026 36.
+Live by lane: `openai` 33, `qwen` 11, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
+Live by region: Western 48, Eastern 27.
+Live by release year: 2023 4, 2024 9, 2025 26, 2026 36.
+
+Only `live` rows are collected, so a `blocked` model is skipped rather than attempted and failed.
+The 2 blocked rows clear the moment Dawei's Alibaba entitlements come through.
 
 ## Shakedown, 2026-08-03 — 72 models, 1 assessment each, 700 calls
 
@@ -102,6 +106,10 @@ ids, and being absent from one says nothing about the others.
 ## Do not re-add these
 
 Each of these was checked with a real call. Reasons are in the registry's `notes` column.
+
+**blocked (2)** — the model works, our account cannot call it yet
+- `Qwen-Max-1201` — HTTP 429 model quota on this DashScope account; needs a quota raise from Dawei. Not attempted until then.
+- `Qwen-Turbo-2024-11` — HTTP 403 access denied on this DashScope account; needs an access request from Dawei. Not attempted until then.
 
 **dead (13)**
 - `Qwen-72B-Chat` — add-old — 

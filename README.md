@@ -70,11 +70,11 @@ term and redraws an unseeded random baseline per request, so it is not reproduci
 ## Output
 
 ONE file per provider lane: `machine_data/raw/topup_<lane>.csv`, one row per assessment,
-**64 columns** = 14 assessment-level + 5 per item x 10 items.
+**63 columns** = 13 assessment-level + 5 per item x 10 items.
 
 Assessment level: `record_id`, `model_name`, `api_model_requested`, `api_model_returned`,
-`provider`, `vendor`, `prompt_version`, `temperature`, `seed_base`, `max_tokens`,
-`assessment_start_utc`, `assessment_duration_ms`, `raw_responses`, `reasoning`.
+`provider`, `vendor`, `prompt_version`, `temperature`, `max_tokens`, `assessment_start_utc`,
+`assessment_duration_ms`, `raw_responses`, `reasoning`.
 
 Per item i in 0..9: `cue_i_left`, `cue_i_right`, `word_i`, `item_i_request_utc`,
 `item_i_response_utc`. Per-item latency is the difference of the two timestamps.
@@ -94,9 +94,6 @@ Notes on specific columns:
   wording change is a measure change.
 - **`temperature`** is the value actually used, after any provider-forced fallback. A row reading
   `provider default` means the model rejected its lane's midpoint and the parameter was omitted.
-- **`seed_base`** records the seed actually sent. Item i receives `seed_base*100 + i`, so this one
-  value reproduces all ten. Only openai, deepseek and qwen accept a seed; the column is blank for
-  the other lanes, so it states what was sent rather than what we intended to send.
 - **`raw_responses` and `reasoning`** each hold ten values as a JSON list, in item order — the
   only packed columns. A column per item for either would add twenty columns of long text, and
   traces are large (DeepSeek-V4-Flash returned 24,805 characters for one pair). `reasoning` is a
@@ -196,12 +193,28 @@ Three tiers, so one bad model cannot take down a run:
 3. **A model whose assessments return zero usable words three times running** is abandoned and
    listed under SKIPPED at the end of the run.
 
+## No seeds (locked 2026-08-03, Dawei)
+
+No seed is sent to any provider. Only openai, deepseek and qwen accept one, so seeding put three
+lanes under a different sampling condition from the other five — an asymmetry across a 77-model
+lineup, bought for nothing: every assessment draws different word pairs, and at these temperatures
+nothing is reproducible call-to-call anyway. Every model now runs on its provider's default
+sampling.
+
+Reproducibility comes from the row, not from a seed: the ten cue pairs, the prompt version, the
+temperature actually used and the verbatim response are all stored.
+
 ## Temperature
 
 Each lane runs at its provider's midpoint: 1.0 where the accepted range is 0-2 (openai, xai,
 deepseek, qwen, hunyuan), 0.5 where it is 0-1 (anthropic, moonshot, doubao). A model that rejects
 its lane's midpoint is retried **with the temperature parameter omitted entirely**, so it applies
 its own default, and the row records `provider default` rather than a number we did not send.
+
+**One temperature per row.** The fallback is sticky: once any call in an assessment drops the
+temperature, the remaining calls do too, so all ten share one value. If they ever disagree the row
+records `mixed:...` — an alarm that a provider rejected the temperature intermittently, which
+should never happen.
 
 The earlier fallback re-sent a literal 1.0, which was a no-op for the five (0,2) lanes whose
 midpoint is already 1.0 — it could not fix the case it existed for.

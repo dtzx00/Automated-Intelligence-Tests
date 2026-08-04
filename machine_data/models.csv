@@ -19,7 +19,7 @@
 18,Claude-Haiku-4.5,anthropic,,Western,efficient,No,claude-haiku-4-5-20251001,pinned,2025-10-15,exact,yes,anthropic /v1/models created_at,80.9580,live,,10,5733
 19,GPT-5.1,openai,,Western,hybrid,Yes,gpt-5.1-2025-11-13,pinned,2025-11-10,exact,yes,openai /v1/models created,80.8367,live,,10,2017
 20,Claude-Opus-4.5,anthropic,,Western,hybrid,Yes,claude-opus-4-5-20251101,pinned,2025-11-24,exact,yes,anthropic /v1/models created_at,79.6869,live,,10,3101
-21,DeepSeek-V3.2,deepseek,qwen,Eastern,hybrid,Yes,deepseek-v3.2,alias,2025-12-01,exact,no,published announcement / dataset,79.4027,live,recovered: DashScope serves it as deepseek-v3.2; DeepSeek's own API and the Tencent gateway do not,0,1939
+21,DeepSeek-V3.2,deepseek,qwen,Eastern,hybrid,Yes,deepseek-v3.2,alias,2025-12-01,exact,no,published announcement / dataset,79.4027,live,re-routed to DashScope as deepseek-v3.2 and re-verified with a live call 2026-08-03; the 0/10 shakedown predates the fix,,
 22,Qwen-Plus,qwen,,Eastern,hybrid,No,qwen-plus,alias,2025-12-01,alias_unresolved,no,latest pinned snapshot qwen-plus-2025-12-01 at collection,77.8874,live,,10,2996
 23,GPT-5.2,openai,,Western,hybrid,Yes,gpt-5.2-2025-12-11,pinned,2025-12-09,exact,yes,openai /v1/models created,79.5105,live,,10,2031
 24,Qwen3-Max,qwen,,Eastern,hybrid,Yes,qwen3-max-2026-01-23,pinned,2026-01-23,exact,no,api id actually called: qwen3-max-2026-01-23 (pinned snapshot; renamed from 'Qwen4-Max' 2026-07-29 to match what answered),76.4485,live,,10,3039
@@ -58,11 +58,11 @@
 57,o1-pro,openai,,Western,reasoning,Yes,o1-pro-2025-03-19,snapshot,2025-03-19,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,,
 58,o3,openai,,Western,reasoning,Yes,o3-2025-04-16,snapshot,2025-04-16,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,10,81736
 59,o3-pro,openai,,Western,reasoning,Yes,o3-pro-2025-06-10,snapshot,2025-06-10,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,,
-60,Qwen-Max-1201,qwen,,Eastern,hybrid,No,qwen-max-1201,snapshot,2023-12-01,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — early Qwen-Max,0,94948
+60,Qwen-Max-1201,qwen,,Eastern,hybrid,No,qwen-max-1201,snapshot,2023-12-01,UNVERIFIED,no,PENDING VERIFICATION,,blocked,HTTP 429 model quota on this DashScope account; needs a quota raise from Dawei. Not attempted until then.,0,94948
 61,Qwen-72B-Chat,qwen,,Eastern,hybrid,No,qwen-72b-chat,alias,2023-11-30,UNVERIFIED,no,PENDING VERIFICATION,,dead,add-old — ,0,1763
 62,Qwen1.5-72B-Chat,qwen,,Eastern,hybrid,No,qwen1.5-72b-chat,alias,2024-02-04,UNVERIFIED,no,PENDING VERIFICATION,,dead,add-old — ,0,1433
 63,Qwen2-72B-Instruct,qwen,,Eastern,hybrid,No,qwen2-57b-a14b-instruct,alias,2024-06-06,UNVERIFIED,no,PENDING VERIFICATION,,dead,add-old — 72b not served; 57b is,0,1582
-64,Qwen-Turbo-2024-11,qwen,,Eastern,efficient,No,qwen-turbo-2024-11-01,snapshot,2024-11-01,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — ,0,24071
+64,Qwen-Turbo-2024-11,qwen,,Eastern,efficient,No,qwen-turbo-2024-11-01,snapshot,2024-11-01,UNVERIFIED,no,PENDING VERIFICATION,,blocked,HTTP 403 access denied on this DashScope account; needs an access request from Dawei. Not attempted until then.,0,24071
 65,Moonshot-v1-32k,moonshot,,Eastern,all-rounder,No,moonshot-v1-32k,snapshot,2024-02-01,UNVERIFIED,no,PENDING VERIFICATION,,live,add-old — completes the v1 family,10,2550
 66,GPT-5-nano,openai,,Western,efficient,No,gpt-5-nano-2025-08-07,snapshot,2025-08-07,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,10,57904
 67,GPT-5-pro,openai,,Western,reasoning,Yes,gpt-5-pro-2025-10-06,snapshot,2025-10-06,UNVERIFIED,no,PENDING VERIFICATION,,live,add-new — ,,

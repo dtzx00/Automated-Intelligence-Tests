@@ -36,10 +36,12 @@ CHECKS = [
     ("no leftover claim that items are fetched over the network",
      "cue pairs from Rugu" not in code and "from the Rugu CAT" not in readme),
     ("no dead --language flag", "--language" not in code),
-    ("the seed that is sent is also recorded",
-     "seed_base" in d.FIELDS and "seed_base" in readme),
+    ("no seed column, because no seed is sent",
+     "seed_base" not in d.FIELDS and "seed_base" not in readme),
     ("MODEL_LINEUP live count matches the registry",
      f"| **{len(live)}** |" in lineup),
+    ("MODEL_LINEUP blocked count matches the registry",
+     f"| {sum(1 for r in rows if r['status']=='blocked')} |" in lineup),
     ("every live model resolves to a lane that has an adapter",
      all(d.resolve_lane(r) in d.PROVIDERS for r in live)),
     ("every live model has an api_model_id",
@@ -50,13 +52,23 @@ CHECKS = [
     ("every temperature range belongs to a real lane",
      set(d.PROVIDER_TEMP_RANGE) <= set(d.PROVIDERS)),
     ("status values are known",
-     {r["status"] for r in rows} <= {"live", "dead", "dropped"}),
+     {r["status"] for r in rows} <= {"live", "dead", "dropped", "blocked"}),
+    ("no live model is known-blocked (0/10 in the shakedown)",
+     not [r for r in live if r.get("shakedown_items_ok") == "0"]),
+    ("no seed is sent to any provider",
+     '"seed"' not in code),
+    ("every file open declares utf-8",
+     all("encoding=" in ln for ln in code.splitlines()
+         if "open(" in ln and "urlopen" not in ln)),
+    ("a collector crash is reported instead of counted as clean",
+     "collector crash" in code),
 ]
 
 bad = [n for n, ok in CHECKS if not ok]
 for name, ok in CHECKS:
     print(("PASS  " if ok else "FAIL  ") + name)
 print(f"\n{len(CHECKS)-len(bad)}/{len(CHECKS)} checks passed | "
-      f"{len(live)} live, {sum(1 for r in rows if r['status']=='dead')} dead, "
+      f"{len(live)} live, {sum(1 for r in rows if r['status']=='blocked')} blocked, "
+      f"{sum(1 for r in rows if r['status']=='dead')} dead, "
       f"{sum(1 for r in rows if r['status']=='dropped')} dropped")
 sys.exit(1 if bad else 0)
