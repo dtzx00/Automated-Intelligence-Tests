@@ -186,6 +186,17 @@ its own default, and the row records `provider default` rather than a number we 
 The earlier fallback re-sent a literal 1.0, which was a no-op for the five (0,2) lanes whose
 midpoint is already 1.0 — it could not fix the case it existed for.
 
+## Checking the repo agrees with itself
+
+```bash
+python machine_data/tests/check_consistency.py
+```
+
+Fifteen assertions tying the code, this README, `MODEL_LINEUP.md` and `models.csv` together: column
+counts, the single-registry rule, no dead flags, every live model routable and uniquely identified.
+Run it after touching any of them. It exists because a cold reader found the repo asserting three
+different things at once.
+
 ## Known limitations
 
 - **Chat-completions only.** `_openai_like` posts to `/chat/completions` and does not stream.

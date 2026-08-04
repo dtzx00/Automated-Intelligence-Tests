@@ -7,16 +7,18 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 ## Where the lineup stands
 
-| | count |
-|---|---|
-| **live — collected** | **77** |
-| dead — no API on any key we hold | 3 |
-| dropped — reachable but excluded on purpose | 2 |
-| rows in `models.csv` | 82 |
+`models.csv` is the complete record of every model considered, not just the collected ones.
 
-Live models by lane: `openai` 33, `qwen` 13, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
-By region: Western 48, Eastern 29.
-By release year: 2023 5, 2024 10, 2025 26, 2026 36.
+| status | meaning | count |
+|---|---|---|
+| `live` | collected | **77** |
+| `dead` | no API on any key we hold | 13 |
+| `dropped` | reachable, excluded on purpose | 2 |
+| | rows in the file | 92 |
+
+Live by lane: `openai` 33, `qwen` 13, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
+Live by region: Western 48, Eastern 29.
+Live by release year: 2023 5, 2024 10, 2025 26, 2026 36.
 
 ## Shakedown, 2026-08-03 — 72 models, 1 assessment each, 700 calls
 
@@ -99,13 +101,31 @@ ids, and being absent from one says nothing about the others.
 
 ## Do not re-add these
 
-**dead (3)** — no API on any key we hold: `Qwen-72B-Chat`, `Qwen1.5-72B-Chat`, `Qwen2-72B-Instruct`.
-**dropped (2)** — reachable, excluded deliberately: `GLM-5`, `GLM-5.2` (see the GLM
-section above).
-Also permanently closed on Volcano Ark, listed in its catalogue but not subscribable:
-`kimi-k2-250711`, `deepseek-v3-241226`, `deepseek-r1-250120`, `doubao-1-5-pro-32k-250115`,
-`doubao-pro-32k-240615`, `doubao-seed-1-6-*`, `doubao-seed-1-8-*`, `qwen2-5-72b-20240919`,
-`mistral-7b-instruct-v0.2`, `glm-4-5-air`, `glm-4-7`.
+Each of these was checked with a real call. Reasons are in the registry's `notes` column.
+
+**dead (13)**
+- `Qwen-72B-Chat` — add-old — 
+- `Qwen1.5-72B-Chat` — add-old — 
+- `Qwen2-72B-Instruct` — add-old — 72b not served; 57b is
+- `Claude-3-Opus` — retired by Anthropic; claude-3-opus-20240229 not served, and Anthropic now lists only 11 models
+- `Claude-3-Haiku` — retired by Anthropic
+- `Claude-3.5-Sonnet` — retired by Anthropic
+- `Claude-Sonnet-4` — retired by Anthropic; claude-sonnet-4-20250514 not served
+- `Kimi-K2` — retired by Moonshot (k2.5+ only); kimi-k2-250711 on Volcano Ark is listed but closed to subscription
+- `Grok-Code-Fast` — retired by xAI
+- `Llama-2-70b` — no host on any key we hold; would need OpenRouter
+- `Llama4-Maverick` — no host on any key we hold; would need OpenRouter
+- `Llama4-Scout` — no host on any key we hold; would need OpenRouter
+- `Ernie-4.0-8k` — no host on any key we hold
+
+**dropped (2)**
+- `GLM-5` — dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart
+- `GLM-5.2` — dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart
+
+Also listed in Volcano Ark's catalogue but closed to subscription, so unreachable however the
+lineup changes: `kimi-k2-250711`, `deepseek-v3-241226`, `deepseek-r1-250120`,
+`doubao-1-5-pro-32k-250115`, `doubao-pro-32k-240615`, `doubao-seed-1-6-*`, `doubao-seed-1-8-*`,
+`qwen2-5-72b-20240919`, `mistral-7b-instruct-v0.2`, `glm-4-5-air`, `glm-4-7`.
 
 ## Open items
 
