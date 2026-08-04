@@ -11,15 +11,15 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 | status | meaning | count |
 |---|---|---|
-| `live` | collected | **69** |
+| `live` | collected | **75** |
 | `blocked` | reachable model, our account cannot call it yet | 2 |
-| `dead` | no API on any key we hold | 19 |
+| `dead` | no API on any key we hold | 13 |
 | `dropped` | reachable, excluded on purpose | 2 |
 | | rows in the file | 92 |
 
-Live by lane: `openai` 27, `qwen` 11, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
-Live by region: Western 42, Eastern 27.
-Live by release year: 2023 4, 2024 9, 2025 22, 2026 34.
+Live by lane: `openai` 27, `qwen` 11, `anthropic` 11, `moonshot` 6, `openai_responses` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
+Live by region: Western 48, Eastern 27.
+Live by release year: 2023 4, 2024 9, 2025 26, 2026 36.
 
 Only `live` rows are collected, so a `blocked` model is skipped rather than attempted and failed.
 The 2 blocked rows clear the moment Dawei's Alibaba entitlements come through.
@@ -111,16 +111,10 @@ Each of these was checked with a real call. Reasons are in the registry's `notes
 - `Qwen-Max-1201` — HTTP 429 model quota on this DashScope account; needs a quota raise from Dawei. Not attempted until then.
 - `Qwen-Turbo-2024-11` — HTTP 403 access denied on this DashScope account; needs an access request from Dawei. Not attempted until then.
 
-**dead (19)**
-- `o1-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
-- `o3-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
+**dead (13)**
 - `Qwen-72B-Chat` — add-old — 
 - `Qwen1.5-72B-Chat` — add-old — 
 - `Qwen2-72B-Instruct` — add-old — 72b not served; 57b is
-- `GPT-5-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
-- `GPT-5.2-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
-- `GPT-5.4-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
-- `GPT-5.5-pro` — Responses API only — chat/completions returns 404 'This is not a chat model' / 'only supported in v1/responses'. Verified 2026-08-03 with 2 assessments each: 0 words. Would need a new adapter; duplicates a standard tier we already collect.
 - `Claude-3-Opus` — retired by Anthropic; claude-3-opus-20240229 not served, and Anthropic now lists only 11 models
 - `Claude-3-Haiku` — retired by Anthropic
 - `Claude-3.5-Sonnet` — retired by Anthropic
@@ -177,9 +171,9 @@ Every live model was given 2 assessments to shake out the production settings.
 - **69 of 75 collected cleanly.** Overall 1,266 of 1,890 words parsed; excluding the six pro-tier
   models and the eight slow ones, parse rate is effectively 100%.
 - **The six OpenAI `*-pro` models are Responses-API only** — `404 This is not a chat model` /
-  `only supported in v1/responses`. The reviewer predicted this and was right. Marked dead.
-  They wrote rows with zero words, which is why the run log said `+2 (done)`: a written row is not
-  a collected answer, and the 3-strikes rule only fires on three CONSECUTIVE empties.
+  `only supported in v1/responses`. They wrote rows with zero words, which is why the run log said
+  `+2 (done)`: a written row is not a collected answer, and the 3-strikes rule only fires on three
+  CONSECUTIVE empties. FIXED 2026-08-04 — see below; they are live again on their own lane.
 - **Eight models time out at a 600s deadline with item-concurrency 5**: Kimi-K3, Kimi-K2.5,
   Kimi-K2.6, Qwen3.5-Plus, MiniMax-M2.7, MiniMax-M3, DeepSeek-V4-Flash, Doubao-Seed-2.1-turbo.
   They need the slow pass: `--item-concurrency 10 --assessment-timeout 1800`.
@@ -191,3 +185,41 @@ Every live model was given 2 assessments to shake out the production settings.
 - **Do not run two collectors against the same output directory.** Six models have more than 2
   assessments because a detached run and a foreground run overlapped. Resumability counts rows; it
   does not lock the file.
+
+
+## The six pro models, 2026-08-04: fixed, not dead
+
+Calling `/v1/responses` with the same prompt, all six answer:
+
+| model | api id | latency, 1 item | reasoning tokens | word |
+|---|---|---|---|---|
+| o1-pro | o1-pro-2025-03-19 | 42s | 320 / 1,600 (two draws) | organ, instrument |
+| o3-pro | o3-pro-2025-06-10 | 59s | 960 | harpsichord |
+| GPT-5-pro | gpt-5-pro-2025-10-06 | 161s | 1,984 | instrument |
+| GPT-5.2-pro | gpt-5.2-pro-2025-12-11 | 6s | 81 | instrument |
+| GPT-5.4-pro | gpt-5.4-pro-2026-03-05 | 12s | 516 | instrument |
+| GPT-5.5-pro | gpt-5.5-pro-2026-04-23 | 28s | 79 | instrument |
+
+Full assessment through the collector (GPT-5.2-pro, 10 items in parallel): 10/10 words in 62s,
+temperature 1.0 accepted, reasoning summaries captured on 9 of 10 items.
+
+They run on lane `openai_responses` — same key and account as `openai`, separate lane so they get
+their own file and their own concurrency pool instead of clogging the 33-model chat lane. The
+adapter asks for `reasoning.summary="auto"`, which is a CAPTURE knob and not an effort knob, and
+retries once without it if an account is not verified for summaries.
+
+**Cost is the reason to think twice, not the endpoint.** At n=100 (1,000 calls per model), using
+the measured token counts and list pricing:
+
+| model | $/1M in / out | est. n=100 |
+|---|---|---|
+| o1-pro | 150 / 600 | $200–1,000 (reasoning length varied 5x across two draws) |
+| GPT-5-pro | 15 / 120 | ~$240 |
+| GPT-5.4-pro | 30 / 180 | ~$100 |
+| o3-pro | 20 / 80 | ~$80 |
+| GPT-5.2-pro | 21 / 168 | $15–250 |
+| GPT-5.5-pro | 30 / 180 | $20–150 |
+
+Order $700–1,700 for the tier, over half of it o1-pro. The Batch API is half price on every one of
+these if 24-hour turnaround is acceptable. Prices from
+https://developers.openai.com/api/docs/pricing (2026-08-04).

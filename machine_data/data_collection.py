@@ -131,7 +131,7 @@ def build_item_prompt(left, right):
 
 PROVIDER_TEMP_RANGE = {
     "doubao": (0, 1),      # Ark accepts (0,1]; midpoint 0.5
-    "openai": (0, 2), "xai": (0, 2), "deepseek": (0, 2), "qwen": (0, 2), "hunyuan": (0, 2),
+    "openai": (0, 2), "openai_responses": (0, 2), "xai": (0, 2), "deepseek": (0, 2), "qwen": (0, 2), "hunyuan": (0, 2),
     "anthropic": (0, 1), "moonshot": (0, 1),}
 def provider_midpoint(provider):
     lo, hi = PROVIDER_TEMP_RANGE.get(provider, (0, 2))
@@ -232,8 +232,56 @@ def _anthropic(base, key, api_model, prompt, temperature):
     }
 
 # (adapter, env key). No third element: the old "supports seed" flag is gone with seeding itself.
+def _openai_responses(base, key, api_model, prompt, temperature):
+    """OpenAI's /responses endpoint.
+
+    The six *-pro models are served ONLY here — chat/completions answers
+    404 "This is not a chat model" / "only supported in v1/responses". Same prompt, same single
+    user turn; only the envelope differs, so the condition is unchanged.
+
+    `reasoning.summary="auto"` is a CAPTURE knob, not an effort knob: it asks for a summary of
+    thinking the model does anyway. Without it the reasoning item comes back with an empty summary.
+    If an account is not verified for summaries the API 400s, so we retry once without it rather
+    than lose the answer.
+    """
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    body = {"model": api_model, "input": prompt, "reasoning": {"summary": "auto"}}
+    if temperature is not None: body["temperature"] = temperature   # None = omit, use model default
+    try:
+        d, h = _post_full(f"{base}/responses", headers, body)
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try: detail = e.read().decode()
+        except Exception: pass
+        if e.code == 400 and "summary" in detail.lower():
+            body.pop("reasoning")
+            d, h = _post_full(f"{base}/responses", headers, body)
+        else:
+            raise urllib.error.HTTPError(e.url, e.code, e.reason, e.headers, io.BytesIO(detail.encode()))
+    text, reasoning = "", []
+    for item in d.get("output") or []:
+        if item.get("type") == "message":
+            text += "".join(c.get("text","") for c in (item.get("content") or []))
+        elif item.get("type") == "reasoning":
+            reasoning += [sm.get("text","") for sm in (item.get("summary") or [])]
+    usage = d.get("usage") or {}
+    status = d.get("status","")
+    incomplete = ((d.get("incomplete_details") or {}).get("reason") or "")
+    return {
+        "text": text.strip(), "reasoning_text": "\n".join(t for t in reasoning if t).strip(),
+        "api_model_returned": d.get("model",""), "response_id": d.get("id",""),
+        "system_fingerprint": "", "finish_reason": f"{status}:{incomplete}" if incomplete else status,
+        "prompt_tokens": usage.get("input_tokens",""), "completion_tokens": usage.get("output_tokens",""),
+        "total_tokens": usage.get("total_tokens",""),
+        "api_request_id": h.get("x-request-id") or h.get("request-id",""),
+        "endpoint_base": base, "max_tokens": "",
+    }
+
 PROVIDERS = {
     "openai":    (lambda k,m,p,t: _openai_like("https://api.openai.com/v1", k, m, p, t), "OPENAI_API_KEY"),
+    # Same key and same account as `openai`; a separate lane so the six slow pro models get their
+    # own file and their own concurrency pool instead of clogging the 33-model chat lane.
+    "openai_responses": (lambda k,m,p,t: _openai_responses("https://api.openai.com/v1", k, m, p, t), "OPENAI_API_KEY"),
     "anthropic": (lambda k,m,p,t: _anthropic("https://api.anthropic.com/v1", k, m, p, t), "ANTHROPIC_API_KEY"),
     "xai":       (lambda k,m,p,t: _openai_like("https://api.x.ai/v1", k, m, p, t), "XAI_API_KEY"),
     "deepseek":  (lambda k,m,p,t: _openai_like("https://api.deepseek.com/v1", k, m, p, t), "DEEPSEEK_API_KEY"),

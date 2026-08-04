@@ -128,7 +128,12 @@ python machine_data/data_collection.py --model "GPT-4.1-mini" --api-model gpt-4.
 # pass 1, the fast 61 models:
 python machine_data/data_collection.py --parallel --assessment-concurrency 10 --item-concurrency 5
 #
-# pass 2, the eight slow reasoning models (Kimi-K3/K2.5/K2.6, Qwen3.5-Plus, MiniMax-M2.7/M3,
+# pass 2, the six OpenAI pro models (Responses API only, slow and expensive — see
+# machine_data/MODEL_LINEUP.md for the cost table before running this one):
+python machine_data/data_collection.py --parallel --only openai_responses \
+  --item-concurrency 10 --assessment-timeout 1800 --assessment-concurrency 4
+#
+# pass 3, the eight slow reasoning models (Kimi-K3/K2.5/K2.6, Qwen3.5-Plus, MiniMax-M2.7/M3,
 # DeepSeek-V4-Flash, Doubao-Seed-2.1-turbo). They time out at 600s with 5 items in flight; give
 # them all ten and a 30-minute deadline. Flagged SLOW in models.csv notes.
 python machine_data/data_collection.py --parallel --only qwen,moonshot,hunyuan,doubao \
