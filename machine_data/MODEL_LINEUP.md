@@ -11,18 +11,17 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 | status | meaning | count |
 |---|---|---|
-| `live` | collected | **75** |
-| `blocked` | reachable model, our account cannot call it yet | 2 |
+| `live` | collected | **71** |
+| `blocked` | reachable model, our account cannot call it yet | 4 |
 | `dead` | no API on any key we hold | 13 |
-| `dropped` | reachable, excluded on purpose | 2 |
+| `dropped` | reachable, excluded on purpose | 4 |
 | | rows in the file | 92 |
 
-Live by lane: `openai` 27, `qwen` 11, `anthropic` 11, `moonshot` 6, `openai_responses` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
-Live by region: Western 48, Eastern 27.
-Live by release year: 2023 4, 2024 9, 2025 26, 2026 36.
+Live by lane: `openai` 27, `qwen` 11, `anthropic` 11, `openai_responses` 6, `moonshot` 5, `xai` 4, `hunyuan` 3, `deepseek` 2, `doubao` 2.
+Live by region: Western 48, Eastern 23.
+Live by release year: 2023 4, 2024 9, 2025 26, 2026 32.
 
 Only `live` rows are collected, so a `blocked` model is skipped rather than attempted and failed.
-The 2 blocked rows clear the moment Dawei's Alibaba entitlements come through.
 
 ## Shakedown, 2026-08-03 — 72 models, 1 assessment each, 700 calls
 
@@ -107,7 +106,9 @@ ids, and being absent from one says nothing about the others.
 
 Each of these was checked with a real call. Reasons are in the registry's `notes` column.
 
-**blocked (2)** — the model works, our account cannot call it yet
+**blocked (4)** — the model works, our account cannot call it yet
+- `MiniMax-M2.7` — HTTP 402 on the Tencent TokenHub gateway: free-trial quota exhausted, postpaid billing not enabled. NOT a slow model — it answered in 49s on 2026-08-03. Has DAT 77.8586. Clears when billing is enabled.
+- `MiniMax-M3` — HTTP 402 on the Tencent TokenHub gateway: free-trial quota exhausted, postpaid billing not enabled. Has DAT 78.4807. Clears when billing is enabled.
 - `Qwen-Max-1201` — HTTP 429 model quota on this DashScope account; needs a quota raise from Dawei. Not attempted until then.
 - `Qwen-Turbo-2024-11` — HTTP 403 access denied on this DashScope account; needs an access request from Dawei. Not attempted until then.
 
@@ -126,9 +127,11 @@ Each of these was checked with a real call. Reasons are in the registry's `notes
 - `Llama4-Scout` — no host on any key we hold; would need OpenRouter
 - `Ernie-4.0-8k` — no host on any key we hold
 
-**dropped (2)**
+**dropped (4)**
+- `Kimi-K3` — FAILS THE 5-MINUTE RULE. Measured 2026-08-04 off Beijing peak: 5 of 10 words hit the 300s cap, mean 161s for the ones that landed. NOTE this one costs a paired observation — it has DAT 77.5552. Re-add only if the provider gets faster.
 - `GLM-5` — dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart
 - `GLM-5.2` — dropped: GLM family excluded from DAT for speed (>1min/call); 10 calls per CAT assessment makes it 5-8 min/assessment, and it has no DAT counterpart
+- `Doubao-Seed-2.1-turbo` — FAILS THE 5-MINUTE RULE. Measured 2026-08-04 off Beijing peak: 7 of 10 words hit the 300s cap, mean 226s for a word that did land, 664s and 40,192 reasoning tokens on a single probe. No DAT counterpart, so dropping costs no paired observation.
 
 Also listed in Volcano Ark's catalogue but closed to subscription, so unreachable however the
 lineup changes: `kimi-k2-250711`, `deepseek-v3-241226`, `deepseek-r1-250120`,
@@ -223,3 +226,43 @@ the measured token counts and list pricing:
 Order $700–1,700 for the tier, over half of it o1-pro. The Batch API is half price on every one of
 these if 24-hour turnaround is acceptable. Prices from
 https://developers.openai.com/api/docs/pricing (2026-08-04).
+
+
+## The five-minute rule (Dawei, 2026-08-04)
+
+**One word must not cost more than five minutes. A model that cannot answer inside the cap is
+dropped, not waited for.**
+
+Enforced in code, not by convention:
+
+- `--call-timeout` (default **300s**) is a budget for the whole word, retries included. A word that
+  hits it is left blank and never retried — retrying spends another five minutes to learn what we
+  already know.
+- The cap is enforced on **wall clock**, not on the socket. A socket timeout is an inactivity
+  timer, so a provider that trickles reasoning tokens never trips it: DeepSeek-V4-Flash returned a
+  *completed* call at 458s under a 300s socket timeout. The call now runs in its own thread and the
+  run stops waiting at the cap.
+- A model is **dropped mid-run** when it averages more than 300s per word over its completed calls,
+  or when at least half its calls hit the cap. It prints `DROP <model>: TOO SLOW — <reason>`.
+- `--assessment-timeout` default drops 1200s -> 600s. With the per-word cap and ten items in
+  flight, an assessment cannot legitimately need more.
+
+### Measured against the rule, 2026-08-04, off Beijing peak
+
+| model | words / 10 | hit the cap | mean per word | verdict |
+|---|---|---|---|---|
+| MiniMax-M2.1 | 10 | 0 | 43s | keep |
+| DeepSeek-V4-Flash-TH | 10 | 0 | 44s | keep |
+| Kimi-K2.5 | 9 | 1 | 74s | keep |
+| DeepSeek-V4-Pro | 10 | 0 | 92s | keep |
+| Qwen3.5-Plus | 8 | 2 | 149s | keep, flagged |
+| DeepSeek-V4-Flash | 10 | 0 | 155s | keep |
+| Kimi-K2.6 | 6 | 4 | 216s | keep, flagged |
+| **Kimi-K3** | 5 | **5** | 161s | **dropped** |
+| **Doubao-Seed-2.1-turbo** | 3 | **7** | 226s | **dropped** |
+
+Dropping Kimi-K3 costs a paired observation — it has a DAT score (77.5552). Doubao-Seed-2.1-turbo
+has no DAT counterpart, so it costs nothing.
+
+DeepSeek-V4-Flash went 0-for-20 on 2026-08-03 and 10-for-10 at 155s a day later. That was
+Beijing-peak load, not the model. Measure Eastern providers off peak before judging them.

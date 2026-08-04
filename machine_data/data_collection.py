@@ -36,7 +36,7 @@ Usage:
   python data_collection.py --model "GPT-4o" --api-model gpt-4o-2024-08-06 --provider openai --n 1 --dry-run
   python data_collection.py --parallel --models machine_data/models.csv --n 500
 """
-import argparse, csv, hashlib, json, os, random, re, subprocess, sys, time, threading, queue
+import argparse, csv, hashlib, io, json, os, random, re, socket, subprocess, sys, time, threading, queue
 import concurrent.futures as cf
 import urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
@@ -161,6 +161,9 @@ for _i in range(N_ITEMS):
                     f"item_{_i}_request_utc", f"item_{_i}_response_utc"]
 FIELDS = META_FIELDS + ITEM_FIELDS
 
+def _parse_ts(s):
+    return datetime.fromisoformat(s.replace('Z', '+00:00'))
+
 def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
@@ -179,10 +182,26 @@ def _extract_inline_think(text):
     clean = re.sub(r"<think(?:ing)?>.*?</think(?:ing)?>", "", text, flags=re.DOTALL|re.IGNORECASE).strip()
     return reasoning, clean
 
-def _post_full(url, headers, body, timeout=300):
+# ---- the per-call cap ------------------------------------------------------------------------
+# Dawei's rule (2026-08-04): ONE word must not cost more than five minutes. A model that cannot
+# answer inside the cap is not a slow model to wait for, it is a model to drop.
+CALL_TIMEOUT_S = 300.0
+
+class TooSlow(Exception):
+    """The call hit CALL_TIMEOUT_S. Deliberately NOT transient: retrying spends another five
+    minutes to learn what we already know. The word is left blank and the run moves on."""
+
+def _post_full(url, headers, body, timeout=None):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read()), dict(r.headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout or CALL_TIMEOUT_S) as r:
+            return json.loads(r.read()), dict(r.headers)
+    except socket.timeout:
+        raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-call cap")
+    except urllib.error.URLError as e:
+        if isinstance(e.reason, (socket.timeout, TimeoutError)):
+            raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-call cap")
+        raise
 
 MAX_TOKENS_ANTHROPIC = 4000
 
@@ -388,15 +407,39 @@ def _is_transient(msg):
 
 def call_item(provider, key, api_model, prompt, target_temp, max_retries=6):
     """One call for one cue pair, with bounded retry on transient failures.
-    Returns (payload|None, temp_used, retries, error_str)."""
+    Returns (payload|None, temp_used, retries, error_str).
+
+    The cap is enforced on WALL CLOCK, not on the socket. A socket timeout is an INACTIVITY timer:
+    a provider that trickles reasoning tokens for eight minutes never goes idle for 300s, so it
+    sails past the cap. Measured on 2026-08-04 — DeepSeek-V4-Flash returned a completed call at
+    458s under a 300s socket timeout. So the call runs in its own thread and we stop waiting at the
+    cap. The abandoned thread is not cancellable and its tokens are already billed; what the cap
+    buys is that the RUN stops waiting, not that the provider stops generating."""
     retries = 0
+    # The cap is a budget for the WHOLE WORD, retries included. Capping each attempt separately
+    # left the hole this was meant to close: a 400-then-retry or a couple of 429s multiplied the
+    # cap by the attempt count, and items were still alive at 600s under a 300s "cap".
+    word_deadline = time.time() + CALL_TIMEOUT_S
     while True:
+        left = word_deadline - time.time()
+        if left <= 0:
+            return None, target_temp, retries, f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap"
         try:
-            payload, temp_used = call_once(provider, key, api_model, prompt, target_temp)
+            ex = cf.ThreadPoolExecutor(1)
+            try:
+                fut = ex.submit(call_once, provider, key, api_model, prompt, target_temp)
+                try:
+                    payload, temp_used = fut.result(timeout=left)
+                except cf.TimeoutError:
+                    raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap")
+            finally:
+                ex.shutdown(wait=False)
             return payload, temp_used, retries, ""
+        except TooSlow as e:
+            return None, target_temp, retries, str(e)
         except Exception as e:
             msg = str(e)
-            if _is_transient(msg) and retries < max_retries:
+            if _is_transient(msg) and retries < max_retries and time.time() < word_deadline:
                 retries += 1
                 time.sleep(min(2.0 * retries, 15))
                 continue
@@ -618,6 +661,10 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop,
     lk = write_lock(str(out_csv))
     dead = 0
 
+    # Per-call timing, kept so the model can be judged against the five-minute rule while it runs.
+    pace = {"calls": 0, "capped": 0, "secs": 0.0, "timed": 0}
+    pace_lock = threading.Lock()
+
     def one_assessment(seq):
         pairs = draw_items()
         gate.wait()
@@ -625,7 +672,29 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop,
                              pairs=pairs, item_workers=item_workers,
                              deadline_s=deadline_s)
         with lk: write_assessment(out_csv, row)
+        capped = sum(1 for e in json.loads(row["raw_responses"]) if "per-word cap" in e)
+        secs, timed = 0.0, 0
+        for i in range(N_ITEMS):
+            a, b = row.get(f"item_{i}_request_utc"), row.get(f"item_{i}_response_utc")
+            if a and b and row.get(f"word_{i}"):
+                secs += (_parse_ts(b) - _parse_ts(a)).total_seconds(); timed += 1
+        with pace_lock:
+            pace["calls"] += N_ITEMS; pace["capped"] += capped
+            pace["secs"] += secs; pace["timed"] += timed
         return row
+
+    def too_slow():
+        """Dawei's rule, applied while the run is going: a model that spends more than five
+        minutes on the average word is dropped, not waited for. Judged on completed calls once
+        there are enough of them, and on cap hits when nothing completes at all."""
+        with pace_lock:
+            calls, capped, secs, timed = pace["calls"], pace["capped"], pace["secs"], pace["timed"]
+        if calls < 10: return ""
+        if timed >= 5 and secs / timed > CALL_TIMEOUT_S:
+            return f"averages {secs/timed:.0f}s per word, over the {CALL_TIMEOUT_S:.0f}s cap"
+        if capped / calls >= 0.5:
+            return f"{100*capped/calls:.0f}% of calls hit the {CALL_TIMEOUT_S:.0f}s cap"
+        return ""
 
     # Assessments within a model can run concurrently. Serial assessments made the slowest model
     # the whole run's floor: MiniMax-M3 at 992s per assessment is 138 hours for n=500 on its own.
@@ -651,6 +720,11 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop,
                     print(f"FAIL {name} ({prov}): 3 consecutive empty assessments", flush=True)
                     if prog: prog.finish(name)
                     return name, made-have, "error:3 empty assessments"
+                slow = too_slow()
+                if slow:
+                    print(f"DROP {name} ({prov}): TOO SLOW — {slow}", flush=True)
+                    if prog: prog.finish(name)
+                    return name, made-have, f"too slow:{slow}"
     else:
         while made < n and not stop.is_set():
             row = one_assessment(made)
@@ -666,6 +740,11 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop,
                     return name, made-have, f"error:{err[:60]}"
             else:
                 dead = 0
+            slow = too_slow()
+            if slow:
+                print(f"DROP {name} ({prov}): TOO SLOW — {slow}", flush=True)
+                if prog: prog.finish(name)
+                return name, made-have, f"too slow:{slow}"
     if prog: prog.finish(name)
     return name, made-have, "done"
 
@@ -778,11 +857,16 @@ def main():
     ap.add_argument("--progress-every", type=float, default=60, help="heartbeat seconds")
     ap.add_argument("--assessment-concurrency", type=int, default=1,
                     help="assessments in flight per model")
-    ap.add_argument("--assessment-timeout", type=float, default=1200,
+    ap.add_argument("--call-timeout", type=float, default=CALL_TIMEOUT_S,
+                    help="hard cap on ONE WORD in seconds (default 300), retries included. A word "
+                         "that hits it is left blank and never retried; a model that keeps hitting "
+                         "it is dropped from the lineup.")
+    ap.add_argument("--assessment-timeout", type=float, default=600,
                     help="seconds before an assessment is written with whatever came back")
     ap.add_argument("--only")
     ap.add_argument("--models", default=str(HERE/"models.csv"))
     a = ap.parse_args()
+    globals()["CALL_TIMEOUT_S"] = a.call_timeout
     if a.parallel:
         run_parallel(a.models, a.n, a.out_dir, a.batch, a.concurrency, a.min_gap,
                      only=set(a.only.split(",")) if a.only else None,

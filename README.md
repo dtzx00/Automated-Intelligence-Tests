@@ -133,11 +133,15 @@ python machine_data/data_collection.py --parallel --assessment-concurrency 10 --
 python machine_data/data_collection.py --parallel --only openai_responses \
   --item-concurrency 10 --assessment-timeout 1800 --assessment-concurrency 4
 #
-# pass 3, the eight slow reasoning models (Kimi-K3/K2.5/K2.6, Qwen3.5-Plus, MiniMax-M2.7/M3,
-# DeepSeek-V4-Flash, Doubao-Seed-2.1-turbo). They time out at 600s with 5 items in flight; give
-# them all ten and a 30-minute deadline. Flagged SLOW in models.csv notes.
-python machine_data/data_collection.py --parallel --only qwen,moonshot,hunyuan,doubao \
-  --item-concurrency 10 --assessment-timeout 1800 --assessment-concurrency 4
+# pass 3, the slow reasoning models still in the lineup (Kimi-K2.5/K2.6, Qwen3.5-Plus,
+# DeepSeek-V4-Flash/Pro, MiniMax-M2.1/M2.5). Give them all ten items in flight; the per-word cap
+# does the rest. Kimi-K3 and Doubao-Seed-2.1-turbo were DROPPED for failing the five-minute rule.
+python machine_data/data_collection.py --parallel --only qwen,moonshot,hunyuan,deepseek \
+  --item-concurrency 10 --assessment-concurrency 4
+
+# THE FIVE-MINUTE RULE: one word must not cost more than five minutes, retries included. Enforced
+# by --call-timeout (default 300s), on wall clock, and a model that averages over the cap or hits
+# it on half its calls is dropped mid-run. See machine_data/MODEL_LINEUP.md.
 
 # ONE collector per output directory. Resumability counts rows, it does not lock the file:
 # two overlapping runs will both decide a model needs work and collect it twice.
