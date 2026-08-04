@@ -9,15 +9,14 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 | | count |
 |---|---|
-| inherited from the DAT run | 59 |
-| dead — no host on any key we hold | 11 |
-| recovered on a different host | 2 |
-| additions proposed 2026-08-03 | 30 |
-| confirmed dead after probing (3 Qwen 404s) | −3 |
-| GLM-5, GLM-5.2 dropped (see below) | −2 |
-| **live in `models.csv`** | **77** |
-| Doubao additions (ByteDance, via Volcano Ark) | +3 |
-| DeepSeek line recovered on DashScope (Chat, V3.1) | +2 |
+| **live — collected** | **77** |
+| dead — no API on any key we hold | 3 |
+| dropped — reachable but excluded on purpose | 2 |
+| rows in `models.csv` | 82 |
+
+Live models by lane: `openai` 33, `qwen` 13, `anthropic` 11, `moonshot` 6, `hunyuan` 5, `xai` 4, `doubao` 3, `deepseek` 2.
+By region: Western 48, Eastern 29.
+By release year: 2023 5, 2024 10, 2025 26, 2026 36.
 
 ## Shakedown, 2026-08-03 — 72 models, 1 assessment each, 700 calls
 
@@ -97,6 +96,16 @@ Probing alternate routes after the Ark dead end:
 Lesson: when a vendor retires a model from its own API, check the Chinese cloud gateways
 individually. Tencent, Alibaba and Volcano host overlapping but different subsets, under different
 ids, and being absent from one says nothing about the others.
+
+## Do not re-add these
+
+**dead (3)** — no API on any key we hold: `Qwen-72B-Chat`, `Qwen1.5-72B-Chat`, `Qwen2-72B-Instruct`.
+**dropped (2)** — reachable, excluded deliberately: `GLM-5`, `GLM-5.2` (see the GLM
+section above).
+Also permanently closed on Volcano Ark, listed in its catalogue but not subscribable:
+`kimi-k2-250711`, `deepseek-v3-241226`, `deepseek-r1-250120`, `doubao-1-5-pro-32k-250115`,
+`doubao-pro-32k-240615`, `doubao-seed-1-6-*`, `doubao-seed-1-8-*`, `qwen2-5-72b-20240919`,
+`mistral-7b-instruct-v0.2`, `glm-4-5-air`, `glm-4-7`.
 
 ## Open items
 

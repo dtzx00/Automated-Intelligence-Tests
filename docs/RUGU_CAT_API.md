@@ -1,3 +1,8 @@
+> REFERENCE ONLY — the collector does NOT call these endpoints. Items are drawn locally from the
+> committed pair list (see README, "Design"), and scoring is a separate pass that does not use the
+> platform scorer. This file documents the live Rugu API and the scorer defects found in it, which
+> matter for interpreting any CAT score the platform already stored for human participants.
+
 # Rugu CAT endpoints
 
 ## What this repo uses

@@ -31,7 +31,7 @@ Current state of the lineup, and the evidence behind every inclusion and exclusi
 
 ## Design
 
-**One API call per word pair.** An assessment is: one fetch of 10 cue pairs from the Rugu CAT
+**One API call per word pair.** An assessment is: 10 cue pairs drawn locally from the committed
 endpoint, then 10 independent model calls, one per pair, each in a fresh context. No pair can
 prime another. This matches the human form, where pairs are presented one at a time.
 
@@ -70,11 +70,11 @@ term and redraws an unseeded random baseline per request, so it is not reproduci
 ## Output
 
 ONE file per provider lane: `machine_data/raw/topup_<lane>.csv`, one row per assessment,
-**63 columns** = 13 assessment-level + 5 per item x 10 items.
+**64 columns** = 14 assessment-level + 5 per item x 10 items.
 
 Assessment level: `record_id`, `model_name`, `api_model_requested`, `api_model_returned`,
-`provider`, `vendor`, `prompt_version`, `temperature`, `max_tokens`, `assessment_start_utc`,
-`assessment_duration_ms`, `raw_responses`, `reasoning`.
+`provider`, `vendor`, `prompt_version`, `temperature`, `seed_base`, `max_tokens`,
+`assessment_start_utc`, `assessment_duration_ms`, `raw_responses`, `reasoning`.
 
 Per item i in 0..9: `cue_i_left`, `cue_i_right`, `word_i`, `item_i_request_utc`,
 `item_i_response_utc`. Per-item latency is the difference of the two timestamps.
@@ -87,19 +87,24 @@ Notes on specific columns:
   produced the words.
 - **`vendor` vs `provider`.** `provider` is the API lane that served the call; `vendor` is who
   made the model. Identical on 51 of 55 routed models and different on the four that matter:
-  `MiniMax-M2.5`, `MiniMax-M2.7`, `MiniMax-M3` and `Hunyuan-Hy3` are all served through Tencent's
-  gateway.
+  `MiniMax-M2.5/M2.7/M3` and `Hunyuan-Hy3` go through Tencent's gateway, `DeepSeek-Chat/R1/V3.1/
+  V3.2` and `MiniMax-M2.1` through Alibaba's, and the three Doubao models through Volcano Ark.
 - **`prompt_version`** records which instruction wording the row saw. Bump `PROMPT_VERSION` in
   `data_collection.py` whenever `ITEM_PROMPT_TEMPLATE` changes; the rules are the instrument, so a
   wording change is a measure change.
-- **`temperature`** is the value actually used, after any provider-forced fallback.
+- **`temperature`** is the value actually used, after any provider-forced fallback. A row reading
+  `provider default` means the model rejected its lane's midpoint and the parameter was omitted.
+- **`seed_base`** records the seed actually sent. Item i receives `seed_base*100 + i`, so this one
+  value reproduces all ten. Only openai, deepseek and qwen accept a seed; the column is blank for
+  the other lanes, so it states what was sent rather than what we intended to send.
 - **`raw_responses` and `reasoning`** each hold ten values as a JSON list, in item order — the
   only packed columns. A column per item for either would add twenty columns of long text, and
   traces are large (DeepSeek-V4-Flash returned 24,805 characters for one pair). `reasoning` is a
   list of empty strings for non-reasoning models. Read with `json.loads(row["reasoning"])[i]`.
 
 Deliberately absent: `endpoint_base` (1:1 with `provider`, mapped in code — see the lane table
-below), `language` (constant `en`), `cat_score` and per-item scores (raw files stay immutable;
+below), `language` (English only, locked 2026-08-01 — there is no Chinese arm, so a column reading
+`en` on every row says nothing), `cat_score` and per-item scores (raw files stay immutable;
 scoring writes its own file keyed on `record_id`), per-call response ids and token counts.
 Model metadata (region, intelligence class, release date) is NOT duplicated into rows;
 `machine_data/models.csv` is the single registry and joins on `model_name`.

@@ -8,14 +8,14 @@ skip-and-flag behaviour are carried over unchanged so machine CAT and machine DA
 collected under identical conditions.
 
 DELIVERY: ONE API CALL PER WORD PAIR (locked 2026-08-03, Dawei)
-  1 assessment = 1 fetch of 10 cue pairs from Rugu + 10 independent model calls + 1 CSV row.
+  1 assessment = 10 cue pairs drawn locally + 10 independent model calls + 1 CSV row.
   Each call carries the instructions and exactly one pair, in a fresh context, so no pair can
   prime another. This matches the human form, where pairs are presented one at a time.
   Note the one real divergence: a human accumulates memory across the 10 items and may revise
   earlier answers with the Previous button; independent calls cannot.
 
-OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessment, 63 columns:
-  13 assessment/model/API columns + 5 per item (cue left, cue right, word, request timestamp,
+OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessment, 64 columns:
+  14 assessment/model/API columns + 5 per item (cue left, cue right, word, request timestamp,
   response timestamp) x 10 items. Every field has its own column. raw_responses and reasoning
   each hold ten values as a JSON list, since a column per item for either would add twenty
   columns of long text.
@@ -144,13 +144,14 @@ def provider_midpoint(provider):
 # add 20 columns of long text: raw_responses (verbatim model output per call, in item order,
 # with "[ERROR: ...]" where a call failed) and reasoning (the trace per call, empty for
 # non-reasoning models). Everything else is one value per column.
-# Deliberately absent: endpoint_base (1:1 with provider, mapped in code), language (constant en),
+# Deliberately absent: endpoint_base (1:1 with provider, mapped in code), language (English only,
+# locked 2026-08-01 — there is no Chinese arm, so a column recording "en" on every row says nothing),
 # cat_score (raw files stay immutable; scoring writes its own file keyed on record_id).
 # Model metadata (region, intelligence class, release date) is NOT duplicated here;
 # machine_data/models.csv is the single registry and joins on model_name.
 META_FIELDS = [
     "record_id", "model_name", "api_model_requested", "api_model_returned",
-    "provider", "vendor", "prompt_version", "temperature", "max_tokens",
+    "provider", "vendor", "prompt_version", "temperature", "seed_base", "max_tokens",
     "assessment_start_utc", "assessment_duration_ms",
     "raw_responses", "reasoning",
 ]
@@ -354,7 +355,7 @@ def call_item(provider, key, api_model, prompt, target_temp, seed, max_retries=6
 
 
 # ---- one assessment = 10 calls --------------------------------------------------------------
-def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch, key,
+def run_assessment(model_name, api_model, prov, meta, seed_base, batch, key,
                    pairs=None, fetched_at=None, item_workers=1, deadline_s=1200):
     """Fetch 10 pairs (unless supplied), call the model once per pair, return one row.
 
@@ -364,6 +365,10 @@ def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch
     if pairs is None:
         pairs, fetched_at = draw_items()
     target_temp = provider_midpoint(prov)
+    # Seeds go only to lanes that accept them (openai, deepseek, qwen). Item i is sent
+    # seed_base*100+i, so recording seed_base alone reproduces all ten. Recorded blank for lanes
+    # that take no seed, so the column says what was SENT rather than what we intended to send.
+    seed_sent = seed_base if PROVIDERS[prov][2] else ""
     started = _now(); t_start = time.time()
     record_id = _record_id(model_name, batch, started)
 
@@ -418,7 +423,7 @@ def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch
         "record_id": record_id, "model_name": model_name, "api_model_requested": api_model,
         "api_model_returned": api_model_returned, "provider": prov,
         "vendor": meta.get("vendor", ""), "prompt_version": PROMPT_VERSION,
-        "temperature": temp_effective, "max_tokens": max_tokens,
+        "temperature": temp_effective, "seed_base": seed_sent, "max_tokens": max_tokens,
         "assessment_start_utc": started,
         "assessment_duration_ms": int((time.time() - t_start) * 1000),
         "raw_responses": json.dumps(raws, ensure_ascii=False),
@@ -525,7 +530,7 @@ class LaunchGate:
             if delta < self.min_gap: time.sleep(self.min_gap - delta)
             self.last = time.time()
 
-def collect_one(model_row, n, out_csv, batch, gate, key, stop, language="en",
+def collect_one(model_row, n, out_csv, batch, gate, key, stop,
                 item_workers=1, prog=None, assess_workers=1, deadline_s=1200):
     prov = resolve_lane(model_row); name = model_row["model"]
     api = model_row.get("api_model_id") or model_row["model"]
@@ -539,7 +544,7 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop, language="en",
     def one_assessment(seq):
         pairs, fetched_at = draw_items()
         gate.wait()
-        row = run_assessment(name, api, prov, meta, language, 1000 + seq, batch, key,
+        row = run_assessment(name, api, prov, meta, 1000 + seq, batch, key,
                              pairs=pairs, fetched_at=fetched_at, item_workers=item_workers,
                              deadline_s=deadline_s)
         with lk: write_assessment(out_csv, row)
@@ -588,7 +593,7 @@ def collect_one(model_row, n, out_csv, batch, gate, key, stop, language="en",
     if prog: prog.finish(name)
     return name, made-have, "done"
 
-def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, language,
+def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop,
              lane_results=None, item_workers=1, prog=None, assess_workers=1, deadline_s=1200):
     key = os.environ.get(PROVIDERS[prov][1])
     if not key:
@@ -605,7 +610,7 @@ def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, langua
             try: m = q.get_nowait()
             except queue.Empty: return
             try:
-                name, got, st = collect_one(m, n, out_csv, batch, gate, key, stop, language,
+                name, got, st = collect_one(m, n, out_csv, batch, gate, key, stop,
                                             item_workers=item_workers, prog=prog,
                                             assess_workers=assess_workers, deadline_s=deadline_s)
                 results.append((name, got, st))
@@ -618,7 +623,7 @@ def run_lane(prov, models, n, out_dir, batch, concurrency, min_gap, stop, langua
     if lane_results is not None: lane_results.extend(results)
     print(f"LANE DONE: {prov}", flush=True)
 
-def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, language, only=None,
+def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, only=None,
                  item_workers=1, progress_every=60, assess_workers=1, deadline_s=1200):
     lanes = load_live(models_csv, only)
     if not lanes: sys.exit("no live lanes matched")
@@ -633,7 +638,7 @@ def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, language, 
     results = []; threads = []
     for prov, models in lanes.items():
         t = threading.Thread(target=run_lane, args=(prov, models, n, out_dir, batch, concurrency,
-                                                    min_gap, stop, language, results, item_workers,
+                                                    min_gap, stop, results, item_workers,
                                                     prog, assess_workers, deadline_s), daemon=True)
         t.start(); threads.append(t)
     try:
@@ -652,13 +657,13 @@ def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, language, 
         print("No models skipped — all attempted models collected cleanly.", flush=True)
     return results
 
-def generate(model_name, api_model, provider, n, out_csv, meta, language="en",
-             dry_run=False, batch="cat_collect_2026", pace=0.1, item_workers=1, deadline_s=1200):
+def generate(model_name, api_model, provider, n, out_csv, meta,
+             dry_run=False, batch="cat_collect_2026", item_workers=1, deadline_s=1200):
     key = os.environ.get(PROVIDERS[provider][1])
     if not key: sys.exit(f"Missing env key {PROVIDERS[provider][1]} for provider {provider}")
     made = 0
     while made < n:
-        row = run_assessment(model_name, api_model, provider, meta, language, 1000 + made, batch,
+        row = run_assessment(model_name, api_model, provider, meta, 1000 + made, batch,
                              key, item_workers=item_workers, deadline_s=deadline_s)
         made += 1
         if dry_run:
@@ -672,7 +677,6 @@ def generate(model_name, api_model, provider, n, out_csv, meta, language="en",
                       f"{'  reasoning=' + str(len(rsn[i])) + ' chars' if rsn[i] else ''}")
             return [row]
         write_assessment(out_csv, row)
-        time.sleep(pace)
     print(f"[{provider}/{api_model}] wrote {made} assessments ({made*N_ITEMS} calls) -> {out_csv}")
 
 def main():
@@ -681,7 +685,6 @@ def main():
     ap.add_argument("--n", type=int, default=100,
                     help="assessments per model, each = 10 API calls (locked at 100 by Dawei 2026-08-03)")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--language", default="en", help="en only; the Chinese arms are not collected")
     ap.add_argument("--vendor", default="", help="vendor label; defaults to the lane name")
     ap.add_argument("--batch", default="cat_collect_2026"); ap.add_argument("--out-dir", default=str(HERE/"raw"))
     ap.add_argument("--parallel", action="store_true")
@@ -698,7 +701,7 @@ def main():
     ap.add_argument("--models", default=str(HERE/"models.csv"))
     a = ap.parse_args()
     if a.parallel:
-        run_parallel(a.models, a.n, a.out_dir, a.batch, a.concurrency, a.min_gap, a.language,
+        run_parallel(a.models, a.n, a.out_dir, a.batch, a.concurrency, a.min_gap,
                      only=set(a.only.split(",")) if a.only else None,
                      item_workers=a.item_concurrency, progress_every=a.progress_every,
                      assess_workers=a.assessment_concurrency, deadline_s=a.assessment_timeout); return
@@ -706,7 +709,7 @@ def main():
     out = Path(a.out_dir)/f"topup_{a.provider}.csv"
     generate(a.model, a.api_model or a.model, a.provider, a.n, out,
              {"vendor": a.vendor or a.provider},
-             language=a.language, dry_run=a.dry_run, batch=a.batch,
+             dry_run=a.dry_run, batch=a.batch,
              item_workers=a.item_concurrency, deadline_s=a.assessment_timeout)
 
 if __name__ == "__main__":
