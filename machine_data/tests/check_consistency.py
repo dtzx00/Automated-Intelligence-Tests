@@ -52,10 +52,10 @@ CHECKS = [
     ("every temperature range belongs to a real lane",
      set(d.PROVIDER_TEMP_RANGE) <= set(d.PROVIDERS)),
     ("pace_exempt values are known and each exempt model is documented",
-     lambda: all((r.get("pace_exempt") or "") in ("", "yes") for r in REG)
+     lambda: all((r.get("pace_exempt") or "") in ("", "yes") for r in rows)
              and all(r["status"] == "live" and "5-MINUTE RULE" in r["notes"].upper()
-                     for r in REG if r.get("pace_exempt") == "yes")
-             and all(f"`{r['model']}`" in LINEUP for r in REG if r.get("pace_exempt") == "yes")),
+                     for r in rows if r.get("pace_exempt") == "yes")
+             and all(f"`{r['model']}`" in lineup for r in rows if r.get("pace_exempt") == "yes")),
     ("status values are known",
      {r["status"] for r in rows} <= {"live", "dead", "dropped", "blocked"}),
     ("no live model is known-blocked (0/10 in the shakedown)",
@@ -64,13 +64,59 @@ CHECKS = [
      '"seed"' not in code),
     ("every file open declares utf-8",
      all("encoding=" in ln for ln in code.splitlines()
-         if "open(" in ln and "urlopen" not in ln)),
+         if "open(" in ln and "urlopen" not in ln and "os.open(" not in ln)),
     ("a collector crash is reported instead of counted as clean",
      "collector crash" in code),
+    # The only check here that EXECUTES the collector. Every other check is a string or registry
+    # match, which is exactly why the harvest bug — nine answered items written as zero words —
+    # passed 20/20 twice. One hung item must cost one word, not ten.
+    ("run_assessment keeps every answered item when the deadline fires", lambda: harvest_holds()),
 ]
 
-bad = [n for n, ok in CHECKS if not ok]
-for name, ok in CHECKS:
+def harvest_holds():
+    hung = {"n": 0}
+    lock = __import__("threading").Lock()
+    def fake(key, api_model, prompt, temperature):
+        with lock:
+            hung["n"] += 1
+            first = hung["n"] == 1
+        if first:
+            __import__("time").sleep(30)          # one item hangs past the deadline
+        return {"text": "instrument", "reasoning_text": "", "api_model_returned": api_model,
+                "response_id": "x", "system_fingerprint": "", "finish_reason": "stop",
+                "prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2,
+                "api_request_id": "", "endpoint_base": "fake", "max_tokens": ""}
+    d.PROVIDERS["faketest"] = (fake, "FAKE_KEY")
+    try:
+        pairs = [("piano", "guitar")] * d.N_ITEMS
+        row = d.run_assessment("FakeModel", "fake-1", "faketest", {"vendor": "fake"}, "test",
+                               "k", pairs=pairs, item_workers=5, deadline_s=3)
+    finally:
+        d.PROVIDERS.pop("faketest", None)
+    raws = __import__("json").loads(row["raw_responses"])
+    words = [row[f"word_{i}"] for i in range(d.N_ITEMS)]
+    ok = (len(raws) == d.N_ITEMS                                   # every slot accounted for
+          and sum(1 for w in words if w) == d.N_ITEMS - 1          # only the hung item is lost
+          and sum(1 for e in raws if e.startswith("[ERROR")) == 1)
+    if not ok:
+        print(f"      raw_responses={len(raws)} words={sum(1 for w in words if w)} "
+              f"errors={sum(1 for e in raws if e.startswith('[ERROR'))}")
+    return ok
+
+def _run(ok):
+    """Evaluate a check. A callable check MUST be called: a lambda object is truthy, so the first
+    behavioural check added here silently passed without executing. Found 2026-08-04."""
+    if callable(ok):
+        try:
+            return bool(ok())
+        except Exception as e:
+            print(f"      (raised {type(e).__name__}: {e})")
+            return False
+    return bool(ok)
+
+results = [(name, _run(ok)) for name, ok in CHECKS]
+bad = [n for n, ok in results if not ok]
+for name, ok in results:
     print(("PASS  " if ok else "FAIL  ") + name)
 print(f"\n{len(CHECKS)-len(bad)}/{len(CHECKS)} checks passed | "
       f"{len(live)} live, {sum(1 for r in rows if r['status']=='blocked')} blocked, "

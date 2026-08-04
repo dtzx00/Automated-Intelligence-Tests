@@ -285,3 +285,59 @@ against 1,000 for everyone else. Two consequences:
    within models that complete every item, compare proximity on their slowest items against their
    fastest, which gives the sign and rough size of the bias. Until that check exists, K3 and
    Doubao-Seed-2.1-turbo carry a methods caveat and should not be read as clean point estimates.
+
+
+## Review response, 2026-08-04 — the harvest bug and what it invalidated
+
+An external review found that `run_assessment` **discarded answers it had already paid for**. The
+loop waited on futures in submission order and, on the first deadline timeout, wrote placeholders
+only for the future it was waiting on plus futures not yet done. An item that had ALREADY ANSWERED
+but had not been read yet vanished — no answer, no error, no entry.
+
+Signature in our own data: the 8 "deadline" models had 262 non-word slots, and the report split
+them 117 errors + 145 *absent*. The 145 absences are the bug.
+
+Fixed: `cf.wait` hands back the finished set, so every answered item is harvested before anything
+is cancelled and `raw_responses` is always exactly 10 entries long.
+
+**What it invalidated** — do not cite these:
+- The "deadline — needs the slow pass" verdict on 8 models, and the per-word latencies behind it.
+- The 224-hour serial estimate.
+- The `--item-concurrency 10` prescription, which would have made the loss worse.
+- At n=100 with one collector, four models reading `0,0,0,0` would have hit 3-strikes and been
+  dropped from the study while answering most items. They survived the shakedown only because two
+  overlapping collectors split their assessments — the overlap I called harmless is what masked a
+  model-loss bug.
+
+**Still standing:** the CSV field-limit fix, the Responses-API fix for the pro tier, the two parse
+refusals, and the answers themselves.
+
+### Guards added so this class of bug cannot pass again
+
+`machine_data/tests/check_consistency.py` now **executes** the collector: one hung item against a
+fake provider must cost one word, not ten. Every other check in that file is a string or registry
+match, which is exactly why the harvest bug passed 20/20 twice. Negative control run: breaking the
+harvest on purpose drops the suite to 21/22.
+
+The runner also had to be fixed — it treated a callable check as a plain boolean, so the first
+behavioural check I added was passing without ever running. A lambda object is always truthy.
+
+### Which models run at an unknown temperature (reviewer item 3)
+
+The sticky fallback genuinely fires for **8 of 75 models**, and it is not random — it is the newest
+Claude generation plus the newest Kimi:
+
+`Claude-Opus-4.7`, `Claude-Opus-4.8`, `Claude-Opus-5`, `Claude-Sonnet-5`, `Claude-Fable-5`,
+`Kimi-K2.5`, `Kimi-K2.6`, `Kimi-K3`
+
+They reject the lane midpoint (0.5) and run at the provider default instead, recorded as
+`provider default` in the temperature column. Kimi-K2.6 rejects anything but 1.0 outright
+(`invalid temperature: only 1 is allowed for this model`). This is a real asymmetry against the DAT
+arm's "same temperature policy" claim and belongs in the methods section, not in a footnote.
+
+### Streaming, verified per lane 2026-08-04
+
+Every lane streams and parses to the same row shape as a blocking call: `openai`, `anthropic`,
+`xai`, `qwen`, `hunyuan`, `moonshot`, `doubao`, `openai_responses`. Reasoning still captured while
+streaming (Grok-4.5 3,616 chars, Doubao-Seed-2.0-mini 8,129, GPT-5.2-pro 1,294). End-to-end serial
+run of the whole anthropic lane: 11 models, 10/10 words each, 63 columns.

@@ -36,7 +36,7 @@ Usage:
   python data_collection.py --model "GPT-4o" --api-model gpt-4o-2024-08-06 --provider openai --n 1 --dry-run
   python data_collection.py --parallel --models machine_data/models.csv --n 500
 """
-import argparse, csv, hashlib, io, json, os, random, re, socket, subprocess, sys, time, threading, queue
+import argparse, atexit, csv, hashlib, io, json, os, random, re, socket, subprocess, sys, time, threading, queue
 import concurrent.futures as cf
 import urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
@@ -205,13 +205,109 @@ def _post_full(url, headers, body, timeout=None):
 
 MAX_TOKENS_ANTHROPIC = 4000
 
+# ---- streaming -------------------------------------------------------------------------------
+# Streaming is on by default (--no-stream disables it). Two reasons, neither of them speed:
+#   1. It makes the per-word cap HONEST. A socket timeout is an inactivity timer, so a gateway that
+#      trickles keep-alive bytes never trips it — DeepSeek-V4-Flash returned a COMPLETED call at
+#      458s under a 300s socket timeout. Streaming puts a clock on the bytes.
+#   2. It makes the cap CHEAP. Hanging up tells the provider to stop generating; abandoning a
+#      blocking call leaves the meter running on tokens nobody will ever read.
+# It does not change the request otherwise, so the condition is unchanged.
+STREAM = True
+
+def _post_stream(url, headers, body, deadline=None):
+    """POST with stream=True and read the SSE lines, stopping dead at the wall-clock cap.
+
+    Returns (events, headers). A malformed line is skipped rather than fatal; a provider that
+    cannot stream yields no usable events and the caller falls back to a blocking request.
+    """
+    body = dict(body); body["stream"] = True
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
+    end = deadline if deadline is not None else time.time() + CALL_TIMEOUT_S
+    try:
+        resp = urllib.request.urlopen(req, timeout=min(CALL_TIMEOUT_S, max(end - time.time(), 0.001)))
+    except socket.timeout:
+        raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap")
+    except urllib.error.URLError as e:
+        if isinstance(e.reason, (socket.timeout, TimeoutError)):
+            raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap")
+        raise
+    events, hdrs = [], dict(resp.headers)
+    try:
+        for raw in resp:
+            if time.time() >= end:
+                raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap")
+            line = raw.decode("utf-8", "replace").strip()
+            if not line or line.startswith(":") or line.startswith("event:"):
+                continue
+            if line.startswith("data:"):
+                line = line[5:].strip()
+            if line == "[DONE]":
+                break
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    except socket.timeout:
+        raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap")
+    finally:
+        resp.close()                     # hanging up IS the cancel
+    return events, hdrs
+
+def _fold_chat_stream(events):
+    """Fold OpenAI-compatible deltas back into the blocking response shape, so every adapter parses
+    ONE shape and streaming cannot change what lands in the CSV."""
+    text, reasoning, finish, model, rid, usage = [], [], "", "", "", {}
+    for ev in events:
+        model = ev.get("model") or model
+        rid = ev.get("id") or rid
+        usage = ev.get("usage") or usage
+        for ch in ev.get("choices") or []:
+            delta = ch.get("delta") or ch.get("message") or {}
+            text.append(delta.get("content") or "")
+            reasoning.append(delta.get("reasoning_content") or delta.get("reasoning") or "")
+            finish = ch.get("finish_reason") or finish
+    joined, thought = "".join(text), "".join(reasoning)
+    return {"choices": [{"message": {"content": joined, "reasoning_content": thought},
+                         "finish_reason": finish}],
+            "model": model, "id": rid, "usage": usage,
+            "_text_seen": bool(joined or thought)}
+
+def _fold_anthropic_stream(events):
+    """Same for Anthropic: text_delta and thinking_delta accumulate into its content blocks."""
+    text, thinking, model, rid, stop, usage = [], [], "", "", "", {}
+    for ev in events:
+        t = ev.get("type")
+        if t == "message_start":
+            m = ev.get("message") or {}
+            model = m.get("model") or model; rid = m.get("id") or rid
+            usage = m.get("usage") or usage
+        elif t == "content_block_delta":
+            d = ev.get("delta") or {}
+            if d.get("type") == "text_delta": text.append(d.get("text") or "")
+            elif d.get("type") == "thinking_delta": thinking.append(d.get("thinking") or "")
+        elif t == "message_delta":
+            stop = (ev.get("delta") or {}).get("stop_reason") or stop
+            usage = {**usage, **(ev.get("usage") or {})}
+    blocks = ([{"type": "thinking", "thinking": "".join(thinking)}] if thinking else []) + \
+             [{"type": "text", "text": "".join(text)}]
+    return {"content": blocks, "model": model, "id": rid, "stop_reason": stop, "usage": usage,
+            "_text_seen": bool("".join(text) or "".join(thinking))}
+
 # ---- provider adapters ---------------------------------------------------------------------
 def _openai_like(base, key, api_model, prompt, temperature, extra_headers=None):
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     if extra_headers: headers.update(extra_headers)
     body = {"model": api_model, "messages": [{"role":"user","content":prompt}]}
     if temperature is not None: body["temperature"] = temperature   # None = omit, use model default
-    d, h = _post_full(f"{base}/chat/completions", headers, body)
+    url = f"{base}/chat/completions"
+    d, h = {}, {}
+    if STREAM:
+        events, h = _post_stream(url, headers, body)
+        d = _fold_chat_stream(events)
+    if not d.get("_text_seen"):
+        # A provider that will not stream still gets collected; take the blocking answer.
+        d, h = _post_full(url, headers, body)
     ch = (d.get("choices") or [{}])[0]
     usage = d.get("usage") or {}
     _msg = ch.get("message") or {}
@@ -235,7 +331,13 @@ def _anthropic(base, key, api_model, prompt, temperature):
     body = {"model": api_model, "max_tokens":MAX_TOKENS_ANTHROPIC,
             "messages":[{"role":"user","content":prompt}]}
     if temperature is not None: body["temperature"] = temperature   # None = omit, use model default
-    d, h = _post_full(f"{base}/messages", headers, body)
+    url = f"{base}/messages"
+    d, h = {}, {}
+    if STREAM:
+        events, h = _post_stream(url, headers, body)
+        d = _fold_anthropic_stream(events)
+    if not d.get("_text_seen"):
+        d, h = _post_full(url, headers, body)
     usage = d.get("usage") or {}
     _blocks = d.get("content",[])
     _reasoning = "".join(b.get("thinking","") for b in _blocks if b.get("type")=="thinking").strip()
@@ -266,15 +368,25 @@ def _openai_responses(base, key, api_model, prompt, temperature):
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     body = {"model": api_model, "input": prompt, "reasoning": {"summary": "auto"}}
     if temperature is not None: body["temperature"] = temperature   # None = omit, use model default
+    url = f"{base}/responses"
+    def _send(bd):
+        if STREAM:
+            events, hh = _post_stream(url, headers, bd)
+            # The terminal event carries the whole response object, so what follows parses
+            # identically for streamed and blocking calls.
+            for ev in reversed(events):
+                if ev.get("type") == "response.completed" and ev.get("response"):
+                    return ev["response"], hh
+        return _post_full(url, headers, bd)
     try:
-        d, h = _post_full(f"{base}/responses", headers, body)
+        d, h = _send(body)
     except urllib.error.HTTPError as e:
         detail = ""
         try: detail = e.read().decode()
         except Exception: pass
         if e.code == 400 and "summary" in detail.lower():
             body.pop("reasoning")
-            d, h = _post_full(f"{base}/responses", headers, body)
+            d, h = _send(body)
         else:
             raise urllib.error.HTTPError(e.url, e.code, e.reason, e.headers, io.BytesIO(detail.encode()))
     text, reasoning = "", []
@@ -494,23 +606,28 @@ def run_assessment(model_name, api_model, prov, meta, batch, key,
     # ignore --assessment-timeout entirely in the serial path (300s socket x 6 retries = 30 min).
     ex = cf.ThreadPoolExecutor(min(max(item_workers, 1), N_ITEMS))
     futs = {ex.submit(one_item, i): i for i in range(len(pairs))}
+    # HARVEST EVERY FINISHED ITEM BEFORE CANCELLING ANYTHING. The old loop waited on futures in
+    # submission order and, on the first timeout, wrote placeholders only for the future it was
+    # waiting on plus futures not yet done — so an item that had ALREADY ANSWERED but had not been
+    # read yet was dropped with NO RECORD AT ALL. That is why 145 item slots in the 2026-08-03 run
+    # had no entry in raw_responses, and why models that answered most of their items were scored
+    # 0 words and diagnosed "too slow". cf.wait hands back the finished set, so nothing answered is
+    # thrown away and raw_responses is always exactly N_ITEMS long.
+    left = deadline_s - (time.time() - started_at)
+    finished, unfinished = cf.wait(list(futs), timeout=max(left, 0))
     results = []
-    for fut in futs:
-        left = deadline_s - (time.time() - started_at)
+    for f in finished:
         try:
-            results.append(fut.result(timeout=max(left, 0)))
-        except cf.TimeoutError:
-            # Past the deadline, STOP SPENDING. Without this the queued items kept running and
-            # their answers were thrown away: measured at 8 billed-and-discarded calls per
-            # timeout, worst on exactly the models the deadline exists for.
-            expired.set()
-            for f in futs:
-                f.cancel()               # never-started items are dropped outright
-            for f, j in futs.items():
-                if f is fut or not f.done():
-                    results.append((j, _now(), _now(), None, "",
-                                    f"assessment deadline {deadline_s}s"))
-            break
+            results.append(f.result())
+        except Exception as e:
+            results.append((futs[f], _now(), _now(), None, "", f"collector crash: {e}"[:200]))
+    if unfinished:
+        expired.set()                    # stop items that have not started spending yet
+        for f in unfinished:
+            f.cancel()
+        for f in unfinished:
+            results.append((futs[f], _now(), _now(), None, "",
+                            f"assessment deadline {deadline_s}s"))
     ex.shutdown(wait=False)
     seen = set()
     results = [r for r in sorted(results, key=lambda r: r[0])
@@ -589,6 +706,40 @@ def write_lock(path):
     with _wl_guard:
         if path not in _write_locks: _write_locks[path] = threading.Lock()
         return _write_locks[path]
+
+def acquire_lock(out_dir):
+    """One collector per output directory, enforced instead of remembered.
+
+    Two collectors briefly overlapped on 2026-08-03 and re-collected six models, because resuming
+    counts rows and rows are not a lock. The real damage is subtler: duplicate assessments split a
+    model's empty rows between two processes, so neither saw three in a row and the 3-strikes
+    abandonment never fired. A masked failure signal is worse than a wasted call.
+    """
+    out = Path(out_dir); out.mkdir(parents=True, exist_ok=True)
+    lock = out / ".collector.lock"
+    while True:
+        try:
+            fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, f"{os.getpid()}\n".encode()); os.close(fd)
+            atexit.register(lambda: lock.exists() and lock.unlink())
+            return
+        except FileExistsError:
+            try:
+                pid = int(lock.read_text().strip() or 0)
+            except (ValueError, OSError):
+                pid = 0
+            alive = False
+            if pid:
+                try:
+                    os.kill(pid, 0); alive = True
+                except (OSError, ProcessLookupError):
+                    alive = False
+            if alive:
+                sys.exit(f"another collector (pid {pid}) is already writing to {out}. "
+                         f"Wait for it, or point --out-dir somewhere else.")
+            print(f"clearing a stale lock from pid {pid or 'unknown'}", flush=True)
+            try: lock.unlink()
+            except FileNotFoundError: pass
 
 def load_live(models_csv, only=None):
     """Group models by resolved API lane. Models with no known lane are reported, never dropped
@@ -863,7 +1014,13 @@ def main():
     ap.add_argument("--vendor", default="", help="vendor label; defaults to the lane name")
     ap.add_argument("--batch", default="cat_collect_2026"); ap.add_argument("--out-dir", default=str(HERE/"raw"))
     ap.add_argument("--parallel", action="store_true")
-    ap.add_argument("--concurrency", type=int, default=3)
+    ap.add_argument("--concurrency", type=int, default=1,
+                    help="models in flight PER LANE (default 1). Lanes always run in parallel; "
+                         "within one provider we go one model, one assessment, one call at a time "
+                         "so latency measures the model instead of our own queue (Dawei 2026-08-04).")
+    ap.add_argument("--no-stream", action="store_true",
+                    help="disable streaming (default on: it puts a real clock on the per-word cap "
+                         "and hanging up at the cap stops the provider generating)")
     ap.add_argument("--min-gap", type=float, default=0.5)
     ap.add_argument("--item-concurrency", type=int, default=1,
                     help="calls in flight WITHIN one assessment; timing only, data identical")
@@ -874,12 +1031,21 @@ def main():
                     help="hard cap on ONE WORD in seconds (default 300), retries included. A word "
                          "that hits it is left blank and never retried; a model that keeps hitting "
                          "it is dropped from the lineup.")
-    ap.add_argument("--assessment-timeout", type=float, default=600,
+    ap.add_argument("--assessment-timeout", type=float, default=0,
                     help="seconds before an assessment is written with whatever came back")
     ap.add_argument("--only")
     ap.add_argument("--models", default=str(HERE/"models.csv"))
     a = ap.parse_args()
     globals()["CALL_TIMEOUT_S"] = a.call_timeout
+    globals()["STREAM"] = not a.no_stream
+    if not a.assessment_timeout:
+        # Derived, not guessed: serial items at a 300s cap need 10 x 300s, and a fixed 600s default
+        # would have blanked items 3-10 of every serial assessment.
+        a.assessment_timeout = N_ITEMS * a.call_timeout / max(1, a.item_concurrency) + 60
+        print(f"assessment deadline derived from the per-word cap: {a.assessment_timeout:.0f}s "
+              f"({N_ITEMS} words / {a.item_concurrency} in flight x {a.call_timeout:.0f}s + 60)",
+              flush=True)
+    acquire_lock(a.out_dir)
     if a.parallel:
         run_parallel(a.models, a.n, a.out_dir, a.batch, a.concurrency, a.min_gap,
                      only=set(a.only.split(",")) if a.only else None,

@@ -123,21 +123,24 @@ word can always be diagnosed from the row alone.
 python machine_data/data_collection.py --model "GPT-4.1-mini" --api-model gpt-4.1-mini \
   --provider openai --n 1 --dry-run
 
-# full run: TWO PASSES. n defaults to 100 — locked 2026-08-03; see machine_data/MODEL_LINEUP.md
+# THE FULL RUN — one command, all lanes, resumable. n defaults to 100.
 #
-# pass 1, the fast 61 models:
-python machine_data/data_collection.py --parallel --assessment-concurrency 10 --item-concurrency 5
+# Concurrency: lanes run in PARALLEL, everything inside a lane is SERIAL — one model, one
+# assessment, one call at a time (Dawei 2026-08-04). Four models hammering one endpoint meant we
+# were partly measuring our own queue, not the model. These are the defaults; no flags needed.
+python machine_data/data_collection.py --parallel --out-dir results_n100
+
+# Streaming is ON by default. It puts a real clock on the per-word cap (a socket timeout is an
+# inactivity timer, so a trickling gateway sails past it) and hanging up at the cap tells the
+# provider to stop generating. --no-stream falls back to blocking calls.
 #
-# pass 2, the six OpenAI pro models (Responses API only, slow and expensive — see
-# machine_data/MODEL_LINEUP.md for the cost table before running this one):
-python machine_data/data_collection.py --parallel --only openai_responses \
-  --item-concurrency 10 --assessment-timeout 1800 --assessment-concurrency 4
+# The assessment deadline is DERIVED, not fixed: N_ITEMS / items-in-flight x the per-word cap + 60s.
+# Serial items at a 300s cap need 3,060s, so the old fixed 600s default would have blanked items
+# 3-10 of every assessment.
 #
-# pass 3, the slow reasoning models still in the lineup (Kimi-K2.5/K2.6, Qwen3.5-Plus,
-# DeepSeek-V4-Flash/Pro, MiniMax-M2.1/M2.5). Give them all ten items in flight; the per-word cap
-# does the rest. Kimi-K3 and Doubao-Seed-2.1-turbo were DROPPED for failing the five-minute rule.
-python machine_data/data_collection.py --parallel --only qwen,moonshot,hunyuan,deepseek \
-  --item-concurrency 10 --assessment-concurrency 4
+# ONE COLLECTOR PER OUTPUT DIRECTORY, enforced with a lockfile. Resuming counts rows, and rows are
+# not a lock: two overlapping collectors re-collect models AND split a failing model's empty rows
+# between processes so 3-strikes abandonment never fires.
 
 # THE FIVE-MINUTE RULE: one word must not cost more than five minutes, retries included. Enforced
 # by --call-timeout (default 300s), on wall clock, and a model that averages over the cap or hits
