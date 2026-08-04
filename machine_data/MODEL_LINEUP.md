@@ -103,4 +103,23 @@ ids, and being absent from one says nothing about the others.
 2. Dawei: Alibaba Model Studio — access for `qwen-turbo-2024-11-01`, quota for `qwen-max-1201`.
 3. Me: re-route `DeepSeek-V3.2` to DashScope; add the three Doubao models; verify release dates
    for all additions (provider `created` timestamps are not release dates).
-4. Decide n. n=500 assessments is 5,000 responses per model, ten times the DAT arm's 500.
+4. ~~Decide n.~~ **LOCKED at n=100 by Dawei, 2026-08-03.** See below.
+5. Decide the 6 pro-tier models (`o1-pro`, `o3-pro`, `GPT-5-pro`, `GPT-5.2-pro`, `GPT-5.4-pro`,
+   `GPT-5.5-pro`) — never probed, held back on cost, and duplicates of standard tiers we already
+   have. Default is to drop them.
+
+## n = 100 assessments per model (LOCKED 2026-08-03)
+
+`--n` now defaults to 100, so the decision cannot be lost to a forgotten flag.
+
+100 assessments x 10 items = **1,000 responses per model**, already twice the DAT arm's 500 per
+model. The unit of analysis is the assessment (one participant-equivalent, a 10%-trimmed mean over
+its 10 items), so n=100 puts the standard error of a model mean near 0.3 points — far inside any
+effect we would report. n=500 would buy SE 0.14 for five times the time and money.
+
+Practical effect: the run goes from roughly 14 hours to roughly 3, and the slowest models stop
+being prohibitive. `Doubao-Seed-2.1-turbo` at ~5 min per assessment is 8 hours serial at n=100 and
+under an hour with assessments running 10-deep.
+
+**DO NOT START COLLECTION** until Dawei says so (his instruction, 2026-08-03). Release dates for
+the 30 additions are still unverified, and provider `created` timestamps are not release dates.

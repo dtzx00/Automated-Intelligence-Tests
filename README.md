@@ -96,7 +96,9 @@ python machine_data/data_collection.py --model "GPT-4.1-mini" --api-model gpt-4.
   --provider openai --n 1 --dry-run
 
 # full run: n assessments per model, all lanes in parallel, resumable
-python machine_data/data_collection.py --parallel --models machine_data/models.csv --n 500
+# n defaults to 100 — locked 2026-08-03; see machine_data/MODEL_LINEUP.md
+python machine_data/data_collection.py --parallel --models machine_data/models_v2.csv \
+  --assessment-concurrency 10 --item-concurrency 5
 ```
 
 `--n` counts assessments; each is 10 calls. Runs are resumable per model: existing rows in the

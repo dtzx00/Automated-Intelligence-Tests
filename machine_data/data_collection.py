@@ -672,7 +672,8 @@ def generate(model_name, api_model, provider, n, out_csv, meta, language="en",
 def main():
     ap = argparse.ArgumentParser(description="Collect machine CAT responses, one API call per word pair.")
     ap.add_argument("--model"); ap.add_argument("--api-model"); ap.add_argument("--provider", choices=list(PROVIDERS))
-    ap.add_argument("--n", type=int, default=5, help="assessments per model (each = 10 API calls)")
+    ap.add_argument("--n", type=int, default=100,
+                    help="assessments per model, each = 10 API calls (locked at 100 by Dawei 2026-08-03)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--language", default="en", help="en only; the Chinese arms are not collected")
     ap.add_argument("--vendor", default="", help="vendor label; defaults to the lane name")
