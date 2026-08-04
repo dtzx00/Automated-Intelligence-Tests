@@ -164,6 +164,26 @@ PROGRESS 1/2 models done | 5 assessments this run (50 calls) | 18.7/min | remain
          | furthest behind: GPT-4.1-mini 2/3, Claude-Haiku-4.5 3/3
 ```
 
+## Authentic responses, never forced (locked 2026-08-03, Dawei)
+
+**Collect what the model actually did.** If a word cannot be obtained — the model refused, the call
+failed, or the output could not be parsed — `word_i` is left blank and the row is written anyway.
+No item is ever re-prompted to extract a word, reworded, substituted or backfilled. 8/10, 5/10 and
+0/10 assessments are all kept. (Retrying a transient network/5xx/429 failure is a different thing:
+that recovers the same attempt, it does not ask again for a better answer.)
+
+This follows Olson's DAT, which asks for 10 words and scores the **first 7 valid** ones — invalid
+entries are simply unused and the participant is neither dropped nor asked again.
+
+Coaxing would measure how hard we pushed rather than what the model does. A refusal (`o1` refused
+an item) and prose instead of a word (`Moonshot-v1-8k`: "There is no single word in English
+that...") are real behaviour and part of the result. `raw_responses[i]` always records what came
+back, so every blank is explainable.
+
+**Downstream:** scoring must handle a variable number of words per assessment — never assume 10 —
+and a blank is a recorded outcome, not missing data to be filled in later. The per-model count of
+usable words is itself worth reporting.
+
 ## Failure handling
 
 Three tiers, so one bad model cannot take down a run:
