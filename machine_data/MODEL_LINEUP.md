@@ -1,6 +1,7 @@
 # CAT model lineup — state as of 2026-08-03
 
-Working file: `models_v2.csv`. Every claim below is from a real call, not a provider catalogue.
+Registry: `models.csv` (the single source of truth; the former `models_v2.csv` was promoted to
+this name on 2026-08-03 and the DAT-era registry deleted). Every claim below is from a real call, not a provider catalogue.
 A model id appearing in a provider's `/models` list does NOT mean the account can call it — six
 models in this lineup were "live" by catalogue and returned 404/403/429 on first contact.
 
@@ -14,12 +15,13 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 | additions proposed 2026-08-03 | 30 |
 | confirmed dead after probing (3 Qwen 404s) | −3 |
 | GLM-5, GLM-5.2 dropped (see below) | −2 |
-| **live in `models_v2.csv`** | **73** |
-| Doubao additions pending Dawei's console check | +3 |
+| **live in `models.csv`** | **77** |
+| Doubao additions (ByteDance, via Volcano Ark) | +3 |
+| DeepSeek line recovered on DashScope (Chat, V3.1) | +2 |
 
 ## Shakedown, 2026-08-03 — 72 models, 1 assessment each, 700 calls
 
-`shakedown_items_ok` and `shakedown_ms` in `models_v2.csv` hold the per-model result.
+`shakedown_items_ok` and `shakedown_ms` in `models.csv` hold the per-model result.
 
 - **58 clean** (10/10 items parsed).
 - **4 partial by model behaviour, not defect** — `o1` refused one item ("I can't comply"),

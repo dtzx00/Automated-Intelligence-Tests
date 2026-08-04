@@ -5,6 +5,30 @@ Machine CAT (Convergent Association Task) collection. Companion to
 machine DAT arm. Same models, same provider adapters, same temperature and reasoning policy, so
 convergent and divergent scores are comparable within model.
 
+## The one registry
+
+`machine_data/models.csv` is the **only** model registry. There is no v1/v2 split: the file that
+was briefly called `models_v2.csv` IS this file now, and the older DAT-era registry was deleted
+(recoverable from git history). Every consumer — the collector's `--models` default, the README,
+`MODEL_LINEUP.md` — points here.
+
+Columns that the collector actually reads:
+
+| column | meaning |
+|---|---|
+| `model` | our label, written to `model_name`. Not sent to any API. |
+| `api_model_id` | the exact string sent as `model`. Falls back to `model` if blank. |
+| `provider` | the VENDOR that made the model. |
+| `lane` | overrides the vendor→lane map when the serving API is not the vendor's own. |
+| `status` | only `live` rows are collected. `dead` and `dropped` rows stay for provenance. |
+
+`status` and `lane` exist only in this file. Running an older registry would silently lose every
+lane override — `DeepSeek-R1`, `DeepSeek-Chat`, `DeepSeek-V3.2`, `DeepSeek-V4-Flash-TH`, `GLM-*`,
+`MiniMax-M2.1` and all three Doubao models reach their API only through a `lane` value.
+
+Current state of the lineup, and the evidence behind every inclusion and exclusion, is in
+[machine_data/MODEL_LINEUP.md](machine_data/MODEL_LINEUP.md).
+
 ## Design
 
 **One API call per word pair.** An assessment is: one fetch of 10 cue pairs from the Rugu CAT
@@ -79,6 +103,8 @@ below), `language` (constant `en`), `cat_score` and per-item scores (raw files s
 scoring writes its own file keyed on `record_id`), per-call response ids and token counts.
 Model metadata (region, intelligence class, release date) is NOT duplicated into rows;
 `machine_data/models.csv` is the single registry and joins on `model_name`.
+Model metadata is deliberately NOT copied into the rows: a row records what was sent and what came
+back, and anything about the model is looked up from the registry.
 
 ## Parsing fails closed
 
@@ -97,8 +123,7 @@ python machine_data/data_collection.py --model "GPT-4.1-mini" --api-model gpt-4.
 
 # full run: n assessments per model, all lanes in parallel, resumable
 # n defaults to 100 — locked 2026-08-03; see machine_data/MODEL_LINEUP.md
-python machine_data/data_collection.py --parallel --models machine_data/models_v2.csv \
-  --assessment-concurrency 10 --item-concurrency 5
+python machine_data/data_collection.py --parallel --assessment-concurrency 10 --item-concurrency 5
 ```
 
 `--n` counts assessments; each is 10 calls. Runs are resumable per model: existing rows in the
@@ -145,6 +170,31 @@ Three tiers, so one bad model cannot take down a run:
    other nine items are valid data, so the assessment is kept.
 3. **A model whose assessments return zero usable words three times running** is abandoned and
    listed under SKIPPED at the end of the run.
+
+## Temperature
+
+Each lane runs at its provider's midpoint: 1.0 where the accepted range is 0-2 (openai, xai,
+deepseek, qwen, hunyuan), 0.5 where it is 0-1 (anthropic, moonshot, doubao). A model that rejects
+its lane's midpoint is retried **with the temperature parameter omitted entirely**, so it applies
+its own default, and the row records `provider default` rather than a number we did not send.
+
+The earlier fallback re-sent a literal 1.0, which was a no-op for the five (0,2) lanes whose
+midpoint is already 1.0 — it could not fix the case it existed for.
+
+## Known limitations
+
+- **Chat-completions only.** `_openai_like` posts to `/chat/completions` and does not stream.
+  Models served exclusively through OpenAI's Responses API — the `*-pro` reasoning tier — cannot be
+  collected without a new adapter. None are in the live lineup.
+- **Anthropic reasoning traces are not captured.** The adapter never sends a `thinking` block, so
+  Claude's extended thinking is off and the `reasoning` column is empty for every Claude, while
+  OpenAI/DeepSeek/Qwen/xAI traces come back through `reasoning_content`. This is deliberate:
+  the locked policy is to use each model's shipped default and capture only what the API returns,
+  and enabling extended thinking would change the experimental condition. It is an asymmetry in
+  what we can *observe*, not in what we asked the models to do, and it belongs in the paper's
+  limitations.
+- **Item sampling is not seeded.** Reproducibility comes from storing the drawn pairs in every row,
+  not from a seed, so a row is self-describing but a run is not byte-repeatable.
 
 ## Provider lanes
 

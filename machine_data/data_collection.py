@@ -14,8 +14,8 @@ DELIVERY: ONE API CALL PER WORD PAIR (locked 2026-08-03, Dawei)
   Note the one real divergence: a human accumulates memory across the 10 items and may revise
   earlier answers with the Previous button; independent calls cannot.
 
-OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessment, 65 columns:
-  15 assessment/model/API columns + 5 per item (cue left, cue right, word, request timestamp,
+OUTPUT: ONE file per provider lane, raw/topup_<lane>.csv — one row per assessment, 63 columns:
+  13 assessment/model/API columns + 5 per item (cue left, cue right, word, request timestamp,
   response timestamp) x 10 items. Every field has its own column. raw_responses and reasoning
   each hold ten values as a JSON list, since a column per item for either would add twenty
   columns of long text.
@@ -132,8 +132,7 @@ def build_item_prompt(left, right):
 PROVIDER_TEMP_RANGE = {
     "doubao": (0, 1),      # Ark accepts (0,1]; midpoint 0.5
     "openai": (0, 2), "xai": (0, 2), "deepseek": (0, 2), "qwen": (0, 2), "hunyuan": (0, 2),
-    "anthropic": (0, 1), "moonshot": (0, 1), "openrouter": (0, 2),
-}
+    "anthropic": (0, 1), "moonshot": (0, 1),}
 def provider_midpoint(provider):
     lo, hi = PROVIDER_TEMP_RANGE.get(provider, (0, 2))
     return (lo + hi) / 2
@@ -197,7 +196,8 @@ MAX_TOKENS_ANTHROPIC = 4000
 def _openai_like(base, key, api_model, prompt, temperature, seed=None, extra_headers=None):
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     if extra_headers: headers.update(extra_headers)
-    body = {"model": api_model, "messages": [{"role":"user","content":prompt}], "temperature": temperature}
+    body = {"model": api_model, "messages": [{"role":"user","content":prompt}]}
+    if temperature is not None: body["temperature"] = temperature   # None = omit, use model default
     if seed is not None: body["seed"] = seed
     d, h = _post_full(f"{base}/chat/completions", headers, body)
     ch = (d.get("choices") or [{}])[0]
@@ -220,8 +220,9 @@ def _openai_like(base, key, api_model, prompt, temperature, seed=None, extra_hea
 
 def _anthropic(base, key, api_model, prompt, temperature, seed=None):
     headers = {"x-api-key": key, "anthropic-version":"2023-06-01", "Content-Type":"application/json"}
-    body = {"model": api_model, "max_tokens":MAX_TOKENS_ANTHROPIC, "temperature":temperature,
+    body = {"model": api_model, "max_tokens":MAX_TOKENS_ANTHROPIC,
             "messages":[{"role":"user","content":prompt}]}
+    if temperature is not None: body["temperature"] = temperature   # None = omit, use model default
     d, h = _post_full(f"{base}/messages", headers, body)
     usage = d.get("usage") or {}
     _blocks = d.get("content",[])
@@ -323,7 +324,10 @@ def call_once(provider, key, api_model, prompt, target_temp, seed):
         try: body = e.read().decode()
         except Exception: pass
         if e.code == 400 and "temperature" in body.lower():
-            return fn(key, api_model, prompt, 1.0, None), 1.0
+            # Resending a NUMBER here was a no-op for every (0,2) lane, whose midpoint is already
+            # 1.0. Omit the parameter instead: the model applies its own default, and we record
+            # "provider default" rather than a temperature we did not send.
+            return fn(key, api_model, prompt, None, None), "provider default"
         raise RuntimeError(f"HTTP {e.code}: {body[:200]}")
 
 TRANSIENT_BITS = ("429", "timed out", "timeout", "temporarily", "connection", "reset",
@@ -378,29 +382,24 @@ def run_assessment(model_name, api_model, prov, meta, language, seed_base, batch
     # assessment (300s socket timeout x 6 retries = 30 min per item, worst case). Past the
     # deadline the assessment is written with whatever came back; unfinished items are errors.
     started_at = time.time()
+    # ONE execution path at every concurrency. A 1-worker pool runs the items in submission order,
+    # exactly like the old serial loop, but routing both cases through futures means the deadline
+    # is enforced DURING a call, not only between calls. Previously a single hung request could
+    # ignore --assessment-timeout entirely in the serial path (300s socket x 6 retries = 30 min).
     ex = cf.ThreadPoolExecutor(min(max(item_workers, 1), N_ITEMS))
-    futs = {ex.submit(one_item, i): i for i in range(len(pairs))} if item_workers > 1 else {}
-    if item_workers > 1:
-        results = []
-        for fut in futs:
-            left = deadline_s - (time.time() - started_at)
-            try:
-                results.append(fut.result(timeout=max(left, 0)))
-            except cf.TimeoutError:
-                i = futs[fut]
-                results.append((i, _now(), _now(), None, "", f"assessment deadline {deadline_s}s"))
-        ex.shutdown(wait=False)
-        results.sort(key=lambda r: r[0])
-    else:
-        ex.shutdown(wait=False)
-        results = []
-        for i in range(len(pairs)):
-            if time.time() - started_at > deadline_s:
-                results.append((i, _now(), _now(), None, "", f"assessment deadline {deadline_s}s"))
-            else:
-                results.append(one_item(i))
+    futs = {ex.submit(one_item, i): i for i in range(len(pairs))}
+    results = []
+    for fut in futs:
+        left = deadline_s - (time.time() - started_at)
+        try:
+            results.append(fut.result(timeout=max(left, 0)))
+        except cf.TimeoutError:
+            i = futs[fut]
+            results.append((i, _now(), _now(), None, "", f"assessment deadline {deadline_s}s"))
+    ex.shutdown(wait=False)
+    results.sort(key=lambda r: r[0])
 
-    words, item_ts, raws, reasonings = [], [], [], []
+    words, raws, reasonings, item_ts = [], [], [], []
     api_model_returned = ""; temp_effective = ""; max_tokens = ""
     for i, req_ts, resp_ts, payload, temp_used, err in results:
         if payload is None:
@@ -447,9 +446,16 @@ def write_assessment(out_csv, row):
     _append(out_csv, FIELDS, [row])
 
 def existing_count(out_csv, model_name):
+    """Assessments already collected for this model that carry at least one parsed word.
+
+    Wordless rows are NOT counted. They are kept for provenance (they record what the API said),
+    but counting them would let a model that fails every parse look progressively 'more done' on
+    each resume, and quietly stop retrying while producing nothing."""
     if not out_csv.exists(): return 0
     with open(out_csv) as f:
-        return sum(1 for r in csv.DictReader(f) if r["model_name"] == model_name)
+        return sum(1 for r in csv.DictReader(f)
+                   if r["model_name"] == model_name
+                   and any(r.get(f"word_{i}") for i in range(N_ITEMS)))
 
 _write_locks = {}
 _wl_guard = threading.Lock()
@@ -647,13 +653,13 @@ def run_parallel(models_csv, n, out_dir, batch, concurrency, min_gap, language, 
     return results
 
 def generate(model_name, api_model, provider, n, out_csv, meta, language="en",
-             dry_run=False, batch="cat_collect_2026", pace=0.1, item_workers=1):
+             dry_run=False, batch="cat_collect_2026", pace=0.1, item_workers=1, deadline_s=1200):
     key = os.environ.get(PROVIDERS[provider][1])
     if not key: sys.exit(f"Missing env key {PROVIDERS[provider][1]} for provider {provider}")
     made = 0
     while made < n:
         row = run_assessment(model_name, api_model, provider, meta, language, 1000 + made, batch,
-                             key, item_workers=item_workers)
+                             key, item_workers=item_workers, deadline_s=deadline_s)
         made += 1
         if dry_run:
             print(json.dumps({k: row[k] for k in (
@@ -701,7 +707,7 @@ def main():
     generate(a.model, a.api_model or a.model, a.provider, a.n, out,
              {"vendor": a.vendor or a.provider},
              language=a.language, dry_run=a.dry_run, batch=a.batch,
-             item_workers=a.item_concurrency)
+             item_workers=a.item_concurrency, deadline_s=a.assessment_timeout)
 
 if __name__ == "__main__":
     main()
