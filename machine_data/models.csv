@@ -24,7 +24,7 @@
 23,GPT-5.2,openai,,Western,hybrid,Yes,gpt-5.2-2025-12-11,pinned,2025-12-09,exact,yes,openai /v1/models created,79.5105,live,,,10,2031
 24,Qwen3-Max,qwen,,Eastern,hybrid,Yes,qwen3-max-2026-01-23,pinned,2026-01-23,exact,no,api id actually called: qwen3-max-2026-01-23 (pinned snapshot; renamed from 'Qwen4-Max' 2026-07-29 to match what answered),76.4485,live,,,10,3039
 25,Kimi-K2.5,moonshot,,Eastern,all-rounder,No,kimi-k2.5,alias,2026-01-27,exact,no,zdnet.com/article/moonshot-kimi-k2-5-model + Baidu Baike (2026-01-27),79.4300,live,,,10,553653
-26,MiniMax-M2.5,minimax,,Eastern,reasoning,Yes,minimax-m2.5,alias,2026-02-12,exact,no,minimax.io/blog/minimax-m25 (announcement 2026-02-12),75.5865,live,,,10,391843
+26,MiniMax-M2.5,minimax,,Eastern,reasoning,Yes,minimax-m2.5,alias,2026-02-12,exact,no,minimax.io/blog/minimax-m25 (announcement 2026-02-12),75.5865,blocked,,HTTP 402 on the Tencent TokenHub gateway: free-trial quota exhausted mid-run on 2026-08-04 (it answered in 17s earlier the same day). Third MiniMax model to hit this — the quota is per model and the lane is emptying. Clears when postpaid billing is enabled.,10,391843
 27,Qwen3.5-Plus,qwen,,Eastern,hybrid,No,qwen3.5-plus,alias,2026-02-15,exact,no,earliest pinned DashScope snapshot qwen3.5-plus-2026-02-15,72.8309,live,,"SLOW but inside the cap: 2 of 10 words hit the 300s cap, mean 149s per word (2026-08-04). Kept.",10,713254
 28,Claude-Sonnet-4.6,anthropic,,Western,hybrid,No,claude-sonnet-4-6,alias,2026-02-17,exact,yes,anthropic /v1/models created_at,79.9676,live,,,10,27878
 29,GPT-5.4,openai,,Western,hybrid,No,gpt-5.4-2026-03-05,pinned,2026-03-04,exact,yes,openai /v1/models created,76.7915,live,,,10,2149

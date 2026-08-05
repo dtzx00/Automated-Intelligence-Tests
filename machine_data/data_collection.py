@@ -36,7 +36,7 @@ Usage:
   python data_collection.py --model "GPT-4o" --api-model gpt-4o-2024-08-06 --provider openai --n 1 --dry-run
   python data_collection.py --parallel --models machine_data/models.csv --n 500
 """
-import argparse, atexit, csv, hashlib, io, json, os, random, re, socket, subprocess, sys, time, threading, queue
+import argparse, atexit, csv, hashlib, io, json, os, random, re, signal, socket, subprocess, sys, time, threading, queue
 import concurrent.futures as cf
 import urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
@@ -512,6 +512,7 @@ def call_once(provider, key, api_model, prompt, target_temp):
         raise RuntimeError(f"HTTP {e.code}: {body[:200]}")
 
 TRANSIENT_BITS = ("429", "timed out", "timeout", "temporarily", "connection", "reset",
+                  "incompleteread", "chunked",
                   " 500", " 502", " 503", " 504", " 520", " 521", " 522", " 524")
 def _is_transient(msg):
     m = msg.lower()
@@ -537,15 +538,27 @@ def call_item(provider, key, api_model, prompt, target_temp, max_retries=6):
         if left <= 0:
             return None, target_temp, retries, f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap"
         try:
-            ex = cf.ThreadPoolExecutor(1)
-            try:
-                fut = ex.submit(call_once, provider, key, api_model, prompt, target_temp)
+            # Streaming already enforces the wall-clock cap inside the read loop, so the watchdog
+            # thread is only needed for a blocking call. Spawning one per word ALSO broke on exit:
+            # "cannot schedule new futures after interpreter shutdown" appeared 110 times in the
+            # wave-2 run, recording model errors that were really our own shutdown. Fall back to a
+            # direct call when a thread cannot be started.
+            if STREAM:
+                payload, temp_used = call_once(provider, key, api_model, prompt, target_temp)
+            else:
                 try:
-                    payload, temp_used = fut.result(timeout=left)
-                except cf.TimeoutError:
-                    raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap")
-            finally:
-                ex.shutdown(wait=False)
+                    ex = cf.ThreadPoolExecutor(1)
+                except RuntimeError:
+                    payload, temp_used = call_once(provider, key, api_model, prompt, target_temp)
+                    return payload, temp_used, retries, ""
+                try:
+                    fut = ex.submit(call_once, provider, key, api_model, prompt, target_temp)
+                    try:
+                        payload, temp_used = fut.result(timeout=left)
+                    except cf.TimeoutError:
+                        raise TooSlow(f"exceeded the {CALL_TIMEOUT_S:.0f}s per-word cap")
+                finally:
+                    ex.shutdown(wait=False)
             return payload, temp_used, retries, ""
         except TooSlow as e:
             return None, target_temp, retries, str(e)
@@ -707,39 +720,58 @@ def write_lock(path):
         if path not in _write_locks: _write_locks[path] = threading.Lock()
         return _write_locks[path]
 
-def acquire_lock(out_dir):
+def acquire_lock(out_dir, stale_after=300.0):
     """One collector per output directory, enforced instead of remembered.
 
     Two collectors briefly overlapped on 2026-08-03 and re-collected six models, because resuming
     counts rows and rows are not a lock. The real damage is subtler: duplicate assessments split a
     model's empty rows between two processes, so neither saw three in a row and the 3-strikes
     abandonment never fired. A masked failure signal is worse than a wasted call.
+
+    Liveness is a HEARTBEAT, not a pid. Container pids are low and reused, /proc is not always
+    readable, and os.kill(pid, 0) answered "alive" for a lock left behind by a killed collector —
+    which then blocked every restart. The holder rewrites its timestamp every 60s; a lock that has
+    not been touched in `stale_after` seconds is dead no matter what its pid claims.
     """
     out = Path(out_dir); out.mkdir(parents=True, exist_ok=True)
     lock = out / ".collector.lock"
+
+    def write(fd=None):
+        payload = f"{os.getpid()} {time.time():.0f}\n".encode()
+        if fd is not None:
+            os.write(fd, payload)
+        else:
+            lock.write_bytes(payload)
+
     while True:
         try:
             fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            os.write(fd, f"{os.getpid()}\n".encode()); os.close(fd)
-            atexit.register(lambda: lock.exists() and lock.unlink())
-            return
+            write(fd); os.close(fd)
+            break
         except FileExistsError:
             try:
-                pid = int(lock.read_text().strip() or 0)
-            except (ValueError, OSError):
-                pid = 0
-            alive = False
-            if pid:
-                try:
-                    os.kill(pid, 0); alive = True
-                except (OSError, ProcessLookupError):
-                    alive = False
-            if alive:
-                sys.exit(f"another collector (pid {pid}) is already writing to {out}. "
-                         f"Wait for it, or point --out-dir somewhere else.")
-            print(f"clearing a stale lock from pid {pid or 'unknown'}", flush=True)
+                parts = lock.read_text().split()
+                pid, beat = int(parts[0]), float(parts[1]) if len(parts) > 1 else 0.0
+            except (ValueError, IndexError, OSError):
+                pid, beat = 0, 0.0
+            age = time.time() - beat
+            if beat and age < stale_after:
+                sys.exit(f"another collector (pid {pid}) is writing to {out} — its heartbeat is "
+                         f"{age:.0f}s old. Wait for it, or use a different --out-dir.")
+            print(f"clearing a stale lock (pid {pid or 'unknown'}, "
+                  f"{'no heartbeat' if not beat else f'{age:.0f}s since its last heartbeat'})",
+                  flush=True)
             try: lock.unlink()
             except FileNotFoundError: pass
+
+    atexit.register(lambda: lock.exists() and lock.unlink())
+    def beat():
+        while True:
+            time.sleep(60)
+            try: write()
+            except OSError: return
+    threading.Thread(target=beat, daemon=True).start()
+
 
 def load_live(models_csv, only=None):
     """Group models by resolved API lane. Models with no known lane are reported, never dropped
@@ -1046,6 +1078,24 @@ def main():
               f"({N_ITEMS} words / {a.item_concurrency} in flight x {a.call_timeout:.0f}s + 60)",
               flush=True)
     acquire_lock(a.out_dir)
+
+    # Stop cleanly on Ctrl-C or SIGTERM so the lockfile is released and the next run can resume.
+    # Without this a killed collector left its lock behind with a fresh heartbeat and blocked every
+    # restart for five minutes — hit twice while chunking the 2026-08-04 wave-2 run.
+    def _stop(sig, _frame):
+        # os._exit, not sys.exit. concurrent.futures registers an atexit hook that JOINS its worker
+        # threads, so a normal exit waits for every in-flight call — up to the full 300s per-word
+        # cap — and Ctrl-C looks like a hang. Release the lock by hand and leave immediately;
+        # unfinished assessments are simply not written and the next run re-collects them.
+        lock = Path(a.out_dir) / ".collector.lock"
+        try: lock.unlink()
+        except OSError: pass
+        print(f"\nstopping on signal {sig}. Lock released; rerun the same command to resume from "
+              f"the CSVs.", flush=True)
+        sys.stdout.flush()
+        os._exit(130)
+    signal.signal(signal.SIGINT, _stop)
+    signal.signal(signal.SIGTERM, _stop)
     if a.parallel:
         run_parallel(a.models, a.n, a.out_dir, a.batch, a.concurrency, a.min_gap,
                      only=set(a.only.split(",")) if a.only else None,

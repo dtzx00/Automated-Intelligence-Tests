@@ -11,8 +11,8 @@ models in this lineup were "live" by catalogue and returned 404/403/429 on first
 
 | status | meaning | count |
 |---|---|---|
-| `live` | collected | **73** |
-| `blocked` | reachable model, our account cannot call it yet | 4 |
+| `live` | collected | **72** |
+| `blocked` | reachable model, our account cannot call it yet | 5 |
 | `dead` | no API on any key we hold | 13 |
 | `dropped` | reachable, excluded on purpose | 2 |
 | | rows in the file | 92 |
@@ -107,7 +107,8 @@ ids, and being absent from one says nothing about the others.
 
 Each of these was checked with a real call. Reasons are in the registry's `notes` column.
 
-**blocked (4)** — the model works, our account cannot call it yet
+**blocked (5)** — the model works, our account cannot call it yet
+- `MiniMax-M2.5` — HTTP 402 on the Tencent TokenHub gateway: free-trial quota exhausted mid-run on 2026-08-04 (it answered in 17s earlier the same day). Third MiniMax model to hit this — the quota is per model and the lane is emptying. Clears when postpaid billing is enabled.
 - `MiniMax-M2.7` — HTTP 402 on the Tencent TokenHub gateway: free-trial quota exhausted, postpaid billing not enabled. NOT a slow model — it answered in 49s on 2026-08-03. Has DAT 77.8586. Clears when billing is enabled.
 - `MiniMax-M3` — HTTP 402 on the Tencent TokenHub gateway: free-trial quota exhausted, postpaid billing not enabled. Has DAT 78.4807. Clears when billing is enabled.
 - `Qwen-Max-1201` — HTTP 429 model quota on this DashScope account; needs a quota raise from Dawei. Not attempted until then.
