@@ -19,20 +19,20 @@ from wrt.evaluate import evaluate as wrt_evaluate
 __version__ = "0.1.1"
 
 
-def list_available_tests() -> list:
-    """Return a list of available tests as dicts with short_name and long_name."""
+def list_available_tests() -> dict:
+    """Return available tests as {short_name: long_name}."""
     root = Path(__file__).resolve().parent
-    tests = []
+    tests = {}
     for name in sorted(os.listdir(root)):
         meta_path = root / name / "metadata.json"
         if (root / name).is_dir() and meta_path.is_file():
             try:
                 with open(meta_path, encoding="utf-8") as f:
                     meta = json.load(f)
-                tests.append({
-                    "short_name": meta.get("short_name"),
-                    "long_name": meta.get("long_name"),
-                })
+                short = meta.get("short_name")
+                long = meta.get("long_name")
+                if short and long:
+                    tests[short] = long
             except Exception:
                 continue
     return tests
