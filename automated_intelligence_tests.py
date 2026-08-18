@@ -20,7 +20,7 @@ __version__ = "0.1.1"
 
 
 def list_available_tests() -> list:
-    """Return a list of available tests by loading metadata.json from each test directory."""
+    """Return a list of available tests as dicts with short_name and long_name."""
     root = Path(__file__).resolve().parent
     tests = []
     for name in sorted(os.listdir(root)):
@@ -29,8 +29,10 @@ def list_available_tests() -> list:
             try:
                 with open(meta_path, encoding="utf-8") as f:
                     meta = json.load(f)
-                meta["directory"] = name
-                tests.append(meta)
+                tests.append({
+                    "short_name": meta.get("short_name"),
+                    "long_name": meta.get("long_name"),
+                })
             except Exception:
                 continue
     return tests
