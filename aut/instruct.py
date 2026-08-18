@@ -27,6 +27,8 @@ def instruct(object: str | None = None, seed: int | None = None) -> dict:
     """Return instructions and response format for the Alternative Uses Task.
 
     If object is None, one is sampled from the standard list.
+    The response_format always includes the original object so evaluation
+    can judge appropriateness without external context.
     """
     rng = random.Random(seed)
     obj = object if object is not None else rng.choice(AUT_OBJECTS)
@@ -36,6 +38,7 @@ def instruct(object: str | None = None, seed: int | None = None) -> dict:
         "object": obj,
         "instructions": instructions,
         "response_format": {
-            "uses": ["use 1", "use 2", "..."]
+            "object": obj,
+            "uses": ["use 1", "use 2", "..."],
         },
     }
