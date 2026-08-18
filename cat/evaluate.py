@@ -14,8 +14,13 @@ def _cosine_sim(v1, v2):
 def evaluate(responses, model_key="glove-840b-300d"):
     """
     responses: {"wordset_1": {"word_1":.., "word_2":.., "word_user":..}, ...}
+             or a single {"word_1":.., "word_2":.., "word_user":..} when single_item was used.
     Returns score (mean proximity of user word to the two cues), higher better.
     """
+    # Normalise single-item response into the multi-item shape
+    if "word_user" in responses and "wordset_" not in str(responses.keys()):
+        responses = {"wordset_1": responses}
+
     model = mod.load(model_key)
     scores = []
     details = {}
@@ -25,7 +30,7 @@ def evaluate(responses, model_key="glove-840b-300d"):
         wu = str(item.get("word_user", "")).strip()
         cleaned = pre.clean_word(wu)
         if not cleaned or not val.word(cleaned):
-            details[key] = {"valid": False, "score": None}
+            details[key] = {"valid": False, "score": None, "reason": "invalid or not in Olson list"}
             continue
         v_user = model.embed_exact(cleaned) or model.embed_phrase(cleaned)
         v1 = model.embed_exact(w1) or model.embed_phrase(w1)
@@ -33,7 +38,7 @@ def evaluate(responses, model_key="glove-840b-300d"):
         s1 = _cosine_sim(v_user, v1)
         s2 = _cosine_sim(v_user, v2)
         if s1 is None or s2 is None:
-            details[key] = {"valid": False, "score": None}
+            details[key] = {"valid": False, "score": None, "reason": "missing embedding"}
             continue
         item_score = (s1 + s2) / 2.0
         scores.append(item_score)

@@ -1,4 +1,14 @@
 __pycache__/
 *.pyc
-machine_data/raw/
+*.pyo
 .env
+.DS_Store
+**/.DS_Store
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+machine_data/raw/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/

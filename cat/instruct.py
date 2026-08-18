@@ -26,11 +26,12 @@ def _load_pairs():
     return pairs
 
 def instruct(single_item=False, n_items=10, seed=None):
-    """Return JSON-ready dict with instructions and sampled unique-word pairs.
+    """Generate CAT stimuli.
 
-    single_item=True  -> sample exactly 1 pair, put the pair into the instructions text,
-                        and return a simple response_format {word_1, word_2, word_user}.
-    single_item=False -> sample n_items pairs (default 10), all words unique across the set.
+    single_item=True: sample one pair, put it into the instructions text,
+    and return a simple response_format {"word_1": ..., "word_2": ..., "word_user": "..."}.
+    single_item=False (default): sample n_items unique-word pairs and return
+    the multi-item format with "items" list + response_format of wordset_N.
     """
     rng = random.Random(seed)
     pairs = list(_load_pairs())
@@ -49,10 +50,10 @@ def instruct(single_item=False, n_items=10, seed=None):
         items.append({"id": len(items) + 1, "word_1": a, "word_2": b})
 
     if single_item and items:
-        a, b = items[0]["word_1"], items[0]["word_2"]
+        pair = items[0]
         instructions = (
             f"Enter a single word that is as similar as possible, in all meanings and uses, "
-            f"to the word pair: \"{a}\" and \"{b}\".\n\n"
+            f"to both words in the pair: \"{pair['word_1']}\" and \"{pair['word_2']}\".\n\n"
             "Rules:\n"
             "Your word must be similar to both words in the word pair.\n"
             "Your word must be a single word in English (no open or hyphenated compounds).\n"
@@ -65,7 +66,11 @@ def instruct(single_item=False, n_items=10, seed=None):
             "test": "cat",
             "instructions": instructions,
             "items": items,
-            "response_format": {"word_1": a, "word_2": b, "word_user": "..."},
+            "response_format": {
+                "word_1": pair["word_1"],
+                "word_2": pair["word_2"],
+                "word_user": "...",
+            },
         }
 
     return {
@@ -73,7 +78,11 @@ def instruct(single_item=False, n_items=10, seed=None):
         "instructions": INSTRUCTIONS,
         "items": items,
         "response_format": {
-            f"wordset_{i['id']}": {"word_1": i["word_1"], "word_2": i["word_2"], "word_user": "..."}
+            f"wordset_{i['id']}": {
+                "word_1": i["word_1"],
+                "word_2": i["word_2"],
+                "word_user": "...",
+            }
             for i in items
         },
     }
