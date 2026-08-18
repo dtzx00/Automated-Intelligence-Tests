@@ -25,16 +25,19 @@ def _load_pairs():
                 pairs.append((a.strip(), b.strip()))
     return pairs
 
-def instruct(single_item=False,n_items=10,seed=None):
-    """Input if single_item: if single, the wordpair should be in the instructions.
-    The return format will simply be {word_1:xxx,word_2:xxx,word_user:xxx}.
-    If single_item==False, wordpairs should be appended in the next item in the JSON.
-    Return JSON-ready dict with instructions and sampled unique-word pairs."""
+def instruct(single_item=False, n_items=10, seed=None):
+    """Return JSON-ready dict with instructions and sampled unique-word pairs.
+
+    single_item=True  -> sample exactly 1 pair, put the pair into the instructions text,
+                        and return a simple response_format {word_1, word_2, word_user}.
+    single_item=False -> sample n_items pairs (default 10), all words unique across the set.
+    """
     rng = random.Random(seed)
     pairs = list(_load_pairs())
     used = set()
     items = []
-    while len(items) < n_items and pairs:
+    target = 1 if single_item else n_items
+    while len(items) < target and pairs:
         i = rng.randrange(len(pairs))
         a, b = pairs.pop(i)
         if a in used or b in used:
@@ -44,6 +47,27 @@ def instruct(single_item=False,n_items=10,seed=None):
         if rng.choice([True, False]):
             a, b = b, a
         items.append({"id": len(items) + 1, "word_1": a, "word_2": b})
+
+    if single_item and items:
+        a, b = items[0]["word_1"], items[0]["word_2"]
+        instructions = (
+            f"Enter a single word that is as similar as possible, in all meanings and uses, "
+            f"to the word pair: \"{a}\" and \"{b}\".\n\n"
+            "Rules:\n"
+            "Your word must be similar to both words in the word pair.\n"
+            "Your word must be a single word in English (no open or hyphenated compounds).\n"
+            "Your word must not be a proper noun (no specific people, places or brands).\n"
+            "Your word must not be a specialized vocabulary or technical term (no abbreviations).\n\n"
+            "Notes:\n"
+            "Return only that single word. Do not return anything else."
+        )
+        return {
+            "test": "cat",
+            "instructions": instructions,
+            "items": items,
+            "response_format": {"word_1": a, "word_2": b, "word_user": "..."},
+        }
+
     return {
         "test": "cat",
         "instructions": INSTRUCTIONS,
