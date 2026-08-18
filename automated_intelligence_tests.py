@@ -38,6 +38,11 @@ def list_available_tests() -> dict:
     return tests
 
 
+def call_test_instruction(test_name: str = "DAT", **kwargs) -> dict:
+    """Return the instruction dict for the given test (e.g. 'DAT', 'CAT')."""
+    return instruct(test_name.strip().lower(), **kwargs)
+
+
 def instruct(test: str, **kwargs):
     if test == "cat":
         return cat_instruct(**kwargs)
