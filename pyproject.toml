@@ -1,10 +1,13 @@
 [project]
 name = "automated-intelligence-tests"
 version = "0.1.0"
-description = "Automated CAT and DAT intelligence tests using GWE"
+description = "Automated CAT, DAT, AUT and WRT tests"
 requires-python = ">=3.9"
 dependencies = ["glove-word-embeddings", "numpy"]
 
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["cat*", "dat*", "aut*", "wrt*"]

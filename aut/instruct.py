@@ -2,15 +2,12 @@
 import random
 
 AUT_OBJECTS = [
-    "brick", "paperclip", "bucket",
-    "sock", "fork", "knife",
-    "pencil", "pillow", "broom",
-    "belt", "hat", "purse",
-    "comb", "baseball", "candle",
-    "clock", "lighter", "lamp",
+    "brick", "paperclip", "bucket", "sock", "fork", "knife",
+    "pencil", "pillow", "broom", "belt", "hat", "purse",
+    "comb", "baseball", "candle", "clock", "lighter", "lamp",
 ]
 
-INSTRUCTIONS_TEMPLATE = (
+TEMPLATE = (
     "What are some creative uses for this object: {object}?\n\n"
     "The goal is to come up with creative uses, which are ideas that may strike "
     "as clever, unusual, interesting, uncommon, humorous, innovative, or different.\n\n"
@@ -23,22 +20,12 @@ INSTRUCTIONS_TEMPLATE = (
     "Return the uses as a plain list (one per line). Do not return anything else."
 )
 
-def instruct(object: str | None = None, seed: int | None = None) -> dict:
-    """Return instructions and response format for the Alternative Uses Task.
-
-    If object is None, one is sampled from the standard list.
-    The response_format always includes the original object so evaluation
-    can judge appropriateness without external context.
-    """
+def instruct(object=None, seed=None):
     rng = random.Random(seed)
     obj = object if object is not None else rng.choice(AUT_OBJECTS)
-    instructions = INSTRUCTIONS_TEMPLATE.format(object=obj)
     return {
         "test": "aut",
         "object": obj,
-        "instructions": instructions,
-        "response_format": {
-            "object": obj,
-            "uses": ["use 1", "use 2", "..."],
-        },
+        "instructions": TEMPLATE.format(object=obj),
+        "response_format": {"object": obj, "uses": ["use 1", "use 2", "..."]},
     }

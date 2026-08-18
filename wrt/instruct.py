@@ -11,7 +11,7 @@ WRITING_CUES = [
     ["year", "week", "embark"],
 ]
 
-INSTRUCTIONS_TEMPLATE = (
+TEMPLATE = (
     "Write a short creative story of about five to six sentences "
     "that includes all three of these words: {cues}.\n\n"
     "Rules:\n"
@@ -22,27 +22,15 @@ INSTRUCTIONS_TEMPLATE = (
     "Return only the story text itself. Do not include a title, headings, or any commentary."
 )
 
-def instruct(cues: list[str] | None = None, seed: int | None = None) -> dict:
-    """Return instructions and response format for the Creative Writing Task.
-
-    If cues is None, a triple is sampled from the standard set.
-    The response_format always includes the original cues so evaluation
-    can check that every cue appears and judge appropriateness without
-    external context.
-    """
+def instruct(cues=None, seed=None):
     rng = random.Random(seed)
     if cues is None:
         cues = list(rng.choice(WRITING_CUES))
     else:
         cues = list(cues)
-    cue_str = ", ".join(cues)
-    instructions = INSTRUCTIONS_TEMPLATE.format(cues=cue_str)
     return {
         "test": "wrt",
         "cues": cues,
-        "instructions": instructions,
-        "response_format": {
-            "cues": cues,
-            "story": "...",
-        },
+        "instructions": TEMPLATE.format(cues=", ".join(cues)),
+        "response_format": {"cues": cues, "story": "..."},
     }
