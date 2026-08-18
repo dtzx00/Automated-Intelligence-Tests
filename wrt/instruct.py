@@ -26,6 +26,9 @@ def instruct(cues: list[str] | None = None, seed: int | None = None) -> dict:
     """Return instructions and response format for the Creative Writing Task.
 
     If cues is None, a triple is sampled from the standard set.
+    The response_format always includes the original cues so evaluation
+    can check that every cue appears and judge appropriateness without
+    external context.
     """
     rng = random.Random(seed)
     if cues is None:
@@ -39,6 +42,7 @@ def instruct(cues: list[str] | None = None, seed: int | None = None) -> dict:
         "cues": cues,
         "instructions": instructions,
         "response_format": {
-            "story": "..."
+            "cues": cues,
+            "story": "...",
         },
     }
