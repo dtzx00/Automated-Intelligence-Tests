@@ -18,10 +18,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["automated_intelligence_tests"]
-packages = ["cat", "dat", "aut", "wrt"]
+packages = ["tests", "tests.cat", "tests.dat", "tests.aut", "tests.wrt"]
 
 [tool.setuptools.package-data]
-cat = ["data/*.txt", "metadata.json"]
-dat = ["metadata.json"]
-aut = ["metadata.json"]
-wrt = ["metadata.json"]
+"tests.cat" = ["data/*.txt", "metadata.json"]
+"tests.dat" = ["metadata.json"]
+"tests.aut" = ["metadata.json"]
+"tests.wrt" = ["metadata.json"]

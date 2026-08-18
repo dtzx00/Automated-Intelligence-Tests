@@ -7,21 +7,21 @@ import os
 import json
 from pathlib import Path
 
-from cat.instruct import instruct as cat_instruct
-from cat.evaluate import evaluate as cat_evaluate
-from dat.instruct import instruct as dat_instruct
-from dat.evaluate import evaluate as dat_evaluate
-from aut.instruct import instruct as aut_instruct
-from aut.evaluate import evaluate as aut_evaluate
-from wrt.instruct import instruct as wrt_instruct
-from wrt.evaluate import evaluate as wrt_evaluate
+from tests.cat.instruct import instruct as cat_instruct
+from tests.cat.evaluate import evaluate as cat_evaluate
+from tests.dat.instruct import instruct as dat_instruct
+from tests.dat.evaluate import evaluate as dat_evaluate
+from tests.aut.instruct import instruct as aut_instruct
+from tests.aut.evaluate import evaluate as aut_evaluate
+from tests.wrt.instruct import instruct as wrt_instruct
+from tests.wrt.evaluate import evaluate as wrt_evaluate
 
 __version__ = "0.1.1"
 
 
 def list_available_tests() -> dict:
     """Return available tests as {short_name: long_name}."""
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent / "tests"
     tests = {}
     for name in sorted(os.listdir(root)):
         meta_path = root / name / "metadata.json"
