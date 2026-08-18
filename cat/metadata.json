@@ -1,0 +1,5 @@
+{
+  "short_name": "CAT",
+  "long_name": "Convergent Association Task",
+  "description": "Measures the ability to find a word that connects two cue words. Participants produce one associated word per pair. Scored by average cosine similarity of the response to the two cues (higher = stronger convergent association)."
+}

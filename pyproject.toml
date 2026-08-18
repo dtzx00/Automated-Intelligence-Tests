@@ -1,6 +1,6 @@
 [project]
 name = "automated-intelligence-tests"
-version = "0.1.0"
+version = "0.1.1"
 description = "Automated CAT, DAT, AUT and WRT intelligence tests for humans and AI"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -21,4 +21,7 @@ py-modules = ["automated_intelligence_tests"]
 packages = ["cat", "dat", "aut", "wrt"]
 
 [tool.setuptools.package-data]
-cat = ["data/*.txt"]
+cat = ["data/*.txt", "metadata.json"]
+dat = ["metadata.json"]
+aut = ["metadata.json"]
+wrt = ["metadata.json"]

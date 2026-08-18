@@ -1,0 +1,5 @@
+{
+  "short_name": "DAT",
+  "long_name": "Divergent Association Task",
+  "description": "A brief measure of verbal creativity and divergent thinking. Generate 10 nouns that are as different from each other as possible. Score is the average pairwise semantic (GloVe) distance of the first 7 unique valid words × 100 (following Olson et al.)."
+}

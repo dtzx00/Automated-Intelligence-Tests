@@ -16,12 +16,16 @@ Minimal Python package providing automated tests of associative and creative abi
 ```bash
 pip install glove-word-embeddings numpy
 # then clone / pip install -e .
+# or once published: pip install automated-intelligence-tests
 ```
 
 ## Usage
 
 ```python
 import automated_intelligence_tests as ait
+
+# List all available tests (loads metadata.json from each test directory)
+ait.list_available_tests()
 
 # CAT
 stim = ait.instruct("cat", n_items=10, seed=42)
