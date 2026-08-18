@@ -19,40 +19,25 @@ from wrt.evaluate import evaluate as wrt_evaluate
 __version__ = "0.1.1"
 
 
-def list_available_tests(return_dicts: bool = False, verbose: bool = True):
-    """Display (and optionally return) all available tests by scanning for metadata.json.
-
-    Uses os.listdir() on the package root and loads each test directory's metadata JSON
-    containing short_name, long_name and description.
-    """
+def list_available_tests(verbose: bool = True) -> list:
+    """Scan test directories with os.listdir() and load their metadata.json."""
     root = Path(__file__).resolve().parent
     tests = []
     for name in sorted(os.listdir(root)):
-        dirpath = root / name
-        meta_path = dirpath / "metadata.json"
-        if dirpath.is_dir() and meta_path.is_file():
+        meta_path = root / name / "metadata.json"
+        if (root / name).is_dir() and meta_path.is_file():
             try:
                 with open(meta_path, encoding="utf-8") as f:
                     meta = json.load(f)
                 meta["directory"] = name
                 tests.append(meta)
-            except (json.JSONDecodeError, OSError) as e:
-                if verbose:
-                    print(f"Warning: could not load metadata for '{name}': {e}")
+            except Exception:
+                continue
     if verbose:
-        if not tests:
-            print("No tests with metadata.json found.")
-        else:
-            print(f"Available tests ({len(tests)}):\n")
-            for t in tests:
-                short = t.get("short_name", t.get("directory", "?"))
-                long = t.get("long_name", "")
-                desc = t.get("description", "")
-                print(f"  {short} – {long}")
-                if desc:
-                    print(f"    {desc}")
-                print()
-    return tests if return_dicts else None
+        for t in tests:
+            print(f"{t.get('short_name', '?')}: {t.get('long_name', '')}")
+            print(f"  {t.get('description', '')}\n")
+    return tests
 
 
 def instruct(test: str, **kwargs):
