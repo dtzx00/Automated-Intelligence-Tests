@@ -1,20 +1,17 @@
-"""CAT instruct: generate instructions and stimuli."""
 import random
 from pathlib import Path
 
 PAIRS_FILE = Path(__file__).parent / "data" / "cat_word_pairs_en.txt"
-# fallback to old location if not moved yet
-if not PAIRS_FILE.exists():
-    PAIRS_FILE = Path(__file__).parent.parent / "machine_data" / "items" / "cat_word_pairs_en.txt"
 
 INSTRUCTIONS = (
     "For each word pair, enter a single word that is as similar as possible, "
     "in all meanings and uses, to both words in the pair.\n\n"
     "Rules:\n"
-    "- Your word must be similar to both words in the word pair.\n"
-    "- Your word must be a single word in English (no open or hyphenated compounds).\n"
-    "- Your word must not be a proper noun (no specific people, places or brands).\n"
-    "- Your word must not be a specialized vocabulary or technical term (no abbreviations).\n\n"
+    "Your word must be similar to both words in the word pair.\n"
+    "Your word must be a single word in English (no open or hyphenated compounds).\n"
+    "Your word must not be a proper noun (no specific people, places or brands).\n"
+    "Your word must not be a specialized vocabulary or technical term (no abbreviations).\n\n"
+    "Notes:\n"
     "Return only that single word for each pair. Do not return anything else."
 )
 
@@ -28,8 +25,11 @@ def _load_pairs():
                 pairs.append((a.strip(), b.strip()))
     return pairs
 
-def instruct(n_items=10, seed=None):
-    """Return JSON-ready dict with instructions and sampled unique-word pairs."""
+def instruct(single_item=False,n_items=10,seed=None):
+    """Input if single_item: if single, the wordpair should be in the instructions.
+    The return format will simply be {word_1:xxx,word_2:xxx,word_user:xxx}.
+    If single_item==False, wordpairs should be appended in the next item in the JSON.
+    Return JSON-ready dict with instructions and sampled unique-word pairs."""
     rng = random.Random(seed)
     pairs = list(_load_pairs())
     used = set()

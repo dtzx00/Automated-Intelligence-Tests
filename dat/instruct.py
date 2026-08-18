@@ -4,12 +4,13 @@ INSTRUCTIONS = (
     "Please enter 10 words that are as different from each other as possible, "
     "in all meanings and uses of the words.\n\n"
     "Rules:\n"
-    "1. Only single words in English.\n"
-    "2. Only nouns (things, objects, concepts).\n"
-    "3. No proper nouns (no specific people or places).\n"
-    "4. No specialised vocabulary or technical terms.\n"
-    "5. Think of the words on your own.\n\n"
-    "Return the 10 words."
+    "Only single words in English.\n"
+    "Only nouns (things, objects, concepts).\n"
+    "No proper nouns (no specific people or places).\n"
+    "No specialised vocabulary or technical terms.\n"
+    "Think of the words on your own.\n\n"
+    "Notes:\n"
+    "Return words as comma-separated list. Do not return anything else."
 )
 
 def instruct(n_words=10):
