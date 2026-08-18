@@ -19,8 +19,8 @@ from wrt.evaluate import evaluate as wrt_evaluate
 __version__ = "0.1.1"
 
 
-def list_available_tests(verbose: bool = True) -> list:
-    """Scan test directories with os.listdir() and load their metadata.json."""
+def list_available_tests() -> list:
+    """Return a list of available tests by loading metadata.json from each test directory."""
     root = Path(__file__).resolve().parent
     tests = []
     for name in sorted(os.listdir(root)):
@@ -33,10 +33,6 @@ def list_available_tests(verbose: bool = True) -> list:
                 tests.append(meta)
             except Exception:
                 continue
-    if verbose:
-        for t in tests:
-            print(f"{t.get('short_name', '?')}: {t.get('long_name', '')}")
-            print(f"  {t.get('description', '')}\n")
     return tests
 
 
