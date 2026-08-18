@@ -1,13 +1,24 @@
 [project]
 name = "automated-intelligence-tests"
 version = "0.1.0"
-description = "Automated CAT, DAT, AUT and WRT tests"
+description = "Automated CAT, DAT, AUT and WRT intelligence tests for humans and AI"
+readme = "README.md"
 requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "dtzx00"}]
 dependencies = ["glove-word-embeddings", "numpy"]
+
+[project.urls]
+Homepage = "https://github.com/dtzx00/Automated-Intelligence-Tests"
+Repository = "https://github.com/dtzx00/Automated-Intelligence-Tests"
 
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-include = ["cat*", "dat*", "aut*", "wrt*"]
+[tool.setuptools]
+py-modules = ["automated_intelligence_tests"]
+packages = ["cat", "dat", "aut", "wrt"]
+
+[tool.setuptools.package-data]
+cat = ["data/*.txt"]
