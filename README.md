@@ -64,7 +64,7 @@ ait.call_test_instruction("DAT", **kwargs)   # same as instruct(), case-insensit
 ait.evaluate(test, responses, **kwargs)
 ```
 
-Sub-packages can also be used directly: `from cat import instruct, evaluate`.
+Sub-packages can also be used directly: `from tests.cat import instruct, evaluate`.
 
 | Test  | `instruct` arguments                      | `evaluate` arguments                          |
 |-------|-------------------------------------------|-----------------------------------------------|
@@ -99,15 +99,15 @@ Both use [`glove-word-embeddings`](https://pypi.org/project/glove-word-embedding
 ## Layout
 
 ```
-automated_intelligence_tests.py   dispatcher: instruct() / evaluate()
-cat/  dat/  aut/  wrt/            per-test instruct.py, evaluate.py, metadata.json,
-                                  readme.md, example.ipynb
-cat/data/cat_word_pairs_en.txt    CAT word-pair list
+automated_intelligence_tests.py        dispatcher: list_available_tests() / instruct() / evaluate()
+tests/cat/  tests/dat/                 per-test instruct.py, evaluate.py, metadata.json
+tests/aut/  tests/wrt/
+tests/cat/data/cat_word_pairs_en.txt   CAT word-pair list
 ```
 
-Each test folder has its own `readme.md`, a runnable `example.ipynb`, and a `metadata.json`
-holding its short name, long name and description — that file is what `list_available_tests()`
-reads, so dropping in a new test folder with one makes it discoverable automatically.
+Each test folder carries a `metadata.json` holding its short name, long name and description.
+That file is what `list_available_tests()` reads, so dropping in a new test folder with one makes
+it discoverable automatically.
 
 ## License
 
