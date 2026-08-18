@@ -1,6 +1,6 @@
 [project]
 name = "automated-intelligence-tests"
-version = "0.1.1"
+version = "0.1.2"
 description = "Automated CAT, DAT, AUT and WRT intelligence tests for humans and AI"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -34,11 +34,16 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["automated_intelligence_tests"]
-packages = ["tests", "tests.cat", "tests.dat", "tests.aut", "tests.wrt"]
+packages = [
+    "automated_intelligence_tests",
+    "automated_intelligence_tests.cat",
+    "automated_intelligence_tests.dat",
+    "automated_intelligence_tests.aut",
+    "automated_intelligence_tests.wrt",
+]
 
 [tool.setuptools.package-data]
-"tests.cat" = ["data/*.txt", "metadata.json"]
-"tests.dat" = ["metadata.json"]
-"tests.aut" = ["metadata.json"]
-"tests.wrt" = ["metadata.json"]
+"automated_intelligence_tests.cat" = ["data/*.txt", "metadata.json", "readme.md"]
+"automated_intelligence_tests.dat" = ["metadata.json", "readme.md"]
+"automated_intelligence_tests.aut" = ["metadata.json", "readme.md"]
+"automated_intelligence_tests.wrt" = ["metadata.json", "readme.md"]
