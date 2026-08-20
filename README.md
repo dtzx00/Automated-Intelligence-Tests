@@ -4,12 +4,12 @@ Minimal Python package providing automated tests of associative and creative abi
 human and artificial intelligence. Each test exposes the same two calls: `instruct()` builds the
 stimuli and prompt, `evaluate()` scores the responses.
 
-| Test  | Name                        | `instruct` | `evaluate`                          |
-|-------|-----------------------------|:----------:|-------------------------------------|
-| `cat` | Convergent Association Task | yes        | proximity score (GloVe)             |
-| `dat` | Divergent Association Task  | yes        | Olson score (GloVe)                 |
-| `aut` | Alternative Uses Task       | yes        | not implemented yet                 |
-| `wrt` | Creative Writing Task       | yes        | not implemented yet                 |
+| Test  | Name                        | `instruct` | `evaluate`                        |
+|-------|-----------------------------|------------|-----------------------------------|
+| `cat` | Convergent Association Task | yes        | Semantic proximity score (GloVe)  |
+| `dat` | Divergent Association Task  | yes        | Semantic distance score (GloVe)   |
+| `aut` | Alternative Uses Task       | yes        | not implemented yet               |
+| `cwt` | Creative Writing Task       | yes        | not implemented yet               |
 
 ## Install
 
@@ -67,12 +67,12 @@ ait.evaluate(test, responses, **kwargs)
 Sub-packages can also be used directly:
 `from automated_intelligence_tests.cat import instruct, evaluate`.
 
-| Test  | `instruct` arguments                      | `evaluate` arguments                          |
-|-------|-------------------------------------------|-----------------------------------------------|
-| `cat` | `single_item=False, n_items=10, seed=None` | `responses, model_key="glove-840b-300d"`      |
-| `dat` | `n_words=10`                              | `responses, model_key=..., minimum=7`         |
-| `aut` | `object=None, seed=None`                  | raises `NotImplementedError`                  |
-| `wrt` | `cues=None, seed=None`                    | raises `NotImplementedError`                  |
+| Test  | `instruct` arguments                       | `evaluate` arguments                     |
+|-------|--------------------------------------------|------------------------------------------|
+| `cat` | `single_item=False, n_items=10, seed=None` | `responses, model_key="glove-840b-300d"` |
+| `dat` | `n_words=10`                               | `responses, model_key=..., minimum=7`    |
+| `aut` | `object=None, seed=None`                   | raises `NotImplementedError`             |
+| `cwt` | `cues=None, n_words=3, seed=None`          | raises `NotImplementedError`             |
 
 **CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95, the
 instrument's difficulty control. No word repeats within an assessment. `single_item=True` returns
@@ -82,7 +82,7 @@ one pair with the pair embedded in the instruction text, for one-call-per-item d
 
 **AUT** samples a common object (brick, paperclip, …) unless one is given.
 
-**WRT** samples three cue words unless they are given.
+**CWT** samples one to three cue words unless they are given.
 
 ## Scoring
 

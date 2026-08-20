@@ -1,6 +1,7 @@
-"""Automated Intelligence Tests: CAT, DAT, AUT and WRT.
-
-Minimal package for association, alternative-uses and creative-writing tests.
+"""
+Automated Intelligence Tests: CAT, DAT, AUT and CWT.
+Minimal package for word association, divergent thinking, 
+alternative-uses and creative-writing tests.
 """
 
 import os
@@ -13,10 +14,11 @@ from .dat.instruct import instruct as dat_instruct
 from .dat.evaluate import evaluate as dat_evaluate
 from .aut.instruct import instruct as aut_instruct
 from .aut.evaluate import evaluate as aut_evaluate
-from .wrt.instruct import instruct as wrt_instruct
-from .wrt.evaluate import evaluate as wrt_evaluate
+from .cwt.instruct import instruct as cwt_instruct
+from .cwt.evaluate import evaluate as cwt_evaluate
 
-__version__ = "0.1.2"
+
+__version__ = "0.1.3"
 
 
 def list_available_tests() -> dict:
@@ -50,12 +52,11 @@ def instruct(test: str, **kwargs):
         return dat_instruct(**kwargs)
     if test == "aut":
         return aut_instruct(**kwargs)
-    if test == "wrt":
-        return wrt_instruct(**kwargs)
+    if test == "cwt":
+        return cwt_instruct(**kwargs)
     raise ValueError(
-        f"Unknown test: {test}. Use 'cat', 'dat', 'aut' or 'wrt'. "
-        "Call list_available_tests() to see details."
-    )
+        f"Unknown test: {test}. Use 'cat', 'dat', 'aut' or 'cwt'. "
+        "Call list_available_tests() to see details.")
 
 
 def evaluate(test: str, responses, **kwargs):
@@ -65,9 +66,8 @@ def evaluate(test: str, responses, **kwargs):
         return dat_evaluate(responses, **kwargs)
     if test == "aut":
         return aut_evaluate(responses, **kwargs)
-    if test == "wrt":
-        return wrt_evaluate(responses, **kwargs)
+    if test == "cwt":
+        return cwt_evaluate(responses, **kwargs)
     raise ValueError(
-        f"Unknown test: {test}. Use 'cat', 'dat', 'aut' or 'wrt'. "
-        "Call list_available_tests() to see details."
-    )
+        f"Unknown test: {test}. Use 'cat', 'dat', 'aut' or 'cwt'. "
+        "Call list_available_tests() to see details.")

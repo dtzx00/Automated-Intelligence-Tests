@@ -1,5 +1,0 @@
-{
-  "short_name": "WRT",
-  "long_name": "Creative Writing Task",
-  "description": "Participants write a short creative story that must incorporate three provided cue words. instruct() is implemented; evaluate() is currently a placeholder."
-}

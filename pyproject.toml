@@ -1,7 +1,7 @@
 [project]
 name = "automated-intelligence-tests"
-version = "0.1.2"
-description = "Automated CAT, DAT, AUT and WRT intelligence tests for humans and AI"
+version = "0.1.3"
+description = "Automated CAT, DAT, AUT and CWT intelligence tests for humans and AI"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
@@ -39,11 +39,11 @@ packages = [
     "automated_intelligence_tests.cat",
     "automated_intelligence_tests.dat",
     "automated_intelligence_tests.aut",
-    "automated_intelligence_tests.wrt",
+    "automated_intelligence_tests.cwt",
 ]
 
 [tool.setuptools.package-data]
-"automated_intelligence_tests.cat" = ["data/*.txt", "metadata.json", "readme.md"]
+"automated_intelligence_tests.cat" = ["metadata.json", "readme.md", "data/*.txt"]
 "automated_intelligence_tests.dat" = ["metadata.json", "readme.md"]
 "automated_intelligence_tests.aut" = ["metadata.json", "readme.md"]
-"automated_intelligence_tests.wrt" = ["metadata.json", "readme.md"]
+"automated_intelligence_tests.cwt" = ["metadata.json", "readme.md"]
