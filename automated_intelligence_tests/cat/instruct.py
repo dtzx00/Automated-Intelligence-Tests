@@ -4,9 +4,7 @@ from pathlib import Path
 
 PAIRS_FILE = Path(__file__).parent / "data" / "cat_word_pairs_en.txt"
 
-INSTRUCTIONS = (
-    "For each word pair, enter a single word that is as similar as possible, "
-    "in all meanings and uses, to both words in the pair.\n\n"
+RULES = (
     "Rules:\n"
     "Your word must be similar to both words in the word pair.\n"
     "Your word must be a single word in English (no open or hyphenated compounds).\n"
@@ -43,6 +41,7 @@ def instruct(cue=None, single_item=False, n_words=10, seed=None):
         embedded in the instruction text.
     n_words : int, default 10
         Number of pairs to sample when cue is None and single_item is False.
+        All sampled pairs are listed in the instruction text at once.
     seed : int, optional
         Random seed for reproducible sampling.
     """
@@ -65,6 +64,8 @@ def instruct(cue=None, single_item=False, n_words=10, seed=None):
         used = set()
         items = []
         target = 1 if single_item else n_words
+        if target < 1:
+            raise ValueError("n_words must be >= 1")
         while len(items) < target and pairs:
             i = rng.randrange(len(pairs))
             a, b = pairs.pop(i)
@@ -76,18 +77,15 @@ def instruct(cue=None, single_item=False, n_words=10, seed=None):
                 a, b = b, a
             items.append({"id": len(items) + 1, "word_1": a, "word_2": b})
 
+    if not items:
+        raise ValueError("No word pairs available")
+
     if single_item and items:
         pair = items[0]
         instructions = (
             f"Enter a single word that is as similar as possible, in all meanings and uses, "
             f"to both words in the pair: \"{pair['word_1']}\" and \"{pair['word_2']}\".\n\n"
-            "Rules:\n"
-            "Your word must be similar to both words in the word pair.\n"
-            "Your word must be a single word in English (no open or hyphenated compounds).\n"
-            "Your word must not be a proper noun (no specific people, places or brands).\n"
-            "Your word must not be a specialized vocabulary or technical term (no abbreviations).\n\n"
-            "Notes:\n"
-            "Return only that single word. Do not return anything else."
+            + RULES
         )
         return {
             "test": "cat",
@@ -102,11 +100,21 @@ def instruct(cue=None, single_item=False, n_words=10, seed=None):
             },
         }
 
+    # Multi-item: list every pair in the instruction text so participants see them all at once
+    pair_lines = "\n".join(
+        f"{i['id']}. \"{i['word_1']}\" – \"{i['word_2']}\"" for i in items
+    )
+    instructions = (
+        "For each word pair below, enter a single word that is as similar as possible, "
+        "in all meanings and uses, to both words in the pair.\n\n"
+        f"Word pairs:\n{pair_lines}\n\n"
+        + RULES
+    )
     return {
         "test": "cat",
         "cue": [(i["word_1"], i["word_2"]) for i in items],
         "n_words": len(items),
-        "instructions": INSTRUCTIONS,
+        "instructions": instructions,
         "items": items,
         "response_format": {
             f"wordset_{i['id']}": {
