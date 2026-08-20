@@ -1,40 +1,59 @@
 """DAT instruct: generate instructions."""
 
-CUE = [
-    "brick", "paperclip", "bucket", "sock", "fork", "knife",
-    "pencil", "pillow", "broom", "belt", "hat", "purse",
-    "comb", "baseball", "candle", "clock", "lighter", "lamp"]
 
-INSTRUCTIONS_less_cue = (
-    f"Please enter {n_words} words that are as different from each other as possible, "
-    "in all meanings and uses of the words.\n\n"
-    "Rules:\n"
-    "Only single words in English.\n"
-    "Only nouns (things, objects, concepts).\n"
-    "No proper nouns (no specific people or places).\n"
-    "No specialised vocabulary or technical terms.\n"
-    "Think of the words on your own.\n\n"
-    "Notes:\n"
-    "Return words as comma-separated list. Do not return anything else.")
+def instruct(cue=None, n_words=10, seed=None):
+    """Return instructions for the Divergent Association Task (DAT).
 
-INSTRUCTIONS_with_cue = (
-    f"Please enter {n_words} words that are as different from each other as possible, "
-    "in all meanings and uses of the words.\n\n"
-    "Rules:\n"
-    "Only single words in English.\n"
-    "Only nouns (things, objects, concepts).\n"
-    "No proper nouns (no specific people or places).\n"
-    "No specialised vocabulary or technical terms.\n"
-    "Think of the words on your own.\n\n"
-    "Notes:\n"
-    "Return words as comma-separated list. Do not return anything else.\n"
-    f"The first word is given to you, {cue}")
+    Parameters
+    ----------
+    cue : str, optional
+        Optional starting word. If provided, the participant is told that the
+        first word is given and they should generate the remaining words to be
+        as different as possible from each other (and from the cue).
+    n_words : int, default 10
+        Number of words the participant should produce.
+    seed : int, optional
+        Reserved for future use (kept for API consistency with other tests).
+    """
+    if n_words < 1:
+        raise ValueError("n_words must be >= 1")
 
-def instruct(n_words=10):
+    base_rules = (
+        "Rules:\n"
+        "Only single words in English.\n"
+        "Only nouns (things, objects, concepts).\n"
+        "No proper nouns (no specific people or places).\n"
+        "No specialised vocabulary or technical terms.\n"
+        "Think of the words on your own.\n\n"
+        "Notes:\n"
+        "Return words as comma-separated list. Do not return anything else."
+    )
+
+    if cue is None:
+        instructions = (
+            f"Please enter {n_words} words that are as different from each other "
+            f"as possible, in all meanings and uses of the words.\n\n"
+            + base_rules
+        )
+        response_format = {f"word_{i}": "..." for i in range(1, n_words + 1)}
+    else:
+        cue = str(cue).strip()
+        instructions = (
+            f"Please enter {n_words} words that are as different from each other "
+            f"as possible, in all meanings and uses of the words.\n\n"
+            f"The first word is given to you: {cue}\n\n"
+            + base_rules
+        )
+        # word_1 is the given cue; participant fills the rest
+        response_format = {"word_1": cue}
+        response_format.update(
+            {f"word_{i}": "..." for i in range(2, n_words + 1)}
+        )
+
     return {
         "test": "dat",
-        "cue":cue,
-        "instructions": INSTRUCTIONS_with_cue if cue is not None else INSTRUCTIONS_less_cue,
+        "cue": cue,
         "n_words": n_words,
-        "response_format": {f"word_{i}": "..." for i in range(1, n_words + 1)},
+        "instructions": instructions,
+        "response_format": response_format,
     }

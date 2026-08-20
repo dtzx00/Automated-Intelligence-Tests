@@ -1,10 +1,11 @@
 """AUT – Alternative Uses Task instruct."""
 import random
 
-CUE = [
+CUE_POOL = [
     "brick", "paperclip", "bucket", "sock", "fork", "knife",
     "pencil", "pillow", "broom", "belt", "hat", "purse",
-    "comb", "baseball", "candle", "clock", "lighter", "lamp"]
+    "comb", "baseball", "candle", "clock", "lighter", "lamp",
+]
 
 TEMPLATE = (
     "What are some creative uses for this object: {cue}?\n\n"
@@ -16,25 +17,32 @@ TEMPLATE = (
     "3. Return only the list of uses, nothing else.\n"
     "4. Do not return any thought process or explanations other than the list of uses.\n\n"
     "Notes:\n"
-    "Return the uses as a plain list (one per line). Do not return anything else.")
+    "Return the uses as a plain list (one per line). Do not return anything else."
+)
 
 
-def instruct(cue=None, seed=None):
+def instruct(cue=None, n_words=None, seed=None):
     """Return instructions for the Alternative Uses Task (AUT).
 
     Parameters
     ----------
     cue : str, optional
         The object to generate uses for. If None, sample from the standard set.
+    n_words : int, optional
+        Reserved for future use (e.g. target number of uses). Currently ignored
+        but accepted for API consistency with other tests.
     seed : int, optional
         Random seed for reproducible sampling of the cue.
     """
     rng = random.Random(seed)
     if cue is None:
-        cue = rng.choice(CUE)
+        cue = rng.choice(CUE_POOL)
+    else:
+        cue = str(cue).strip()
     return {
         "test": "aut",
         "cue": cue,
+        "n_words": n_words,
         "instructions": TEMPLATE.format(cue=cue),
         "response_format": {"cue": cue, "responses": ["use 1", "use 2", "..."]},
     }

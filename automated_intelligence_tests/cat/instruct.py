@@ -1,3 +1,4 @@
+"""CAT – Convergent Association Task instruct."""
 import random
 from pathlib import Path
 
@@ -27,29 +28,50 @@ def _load_pairs():
     return pairs
 
 
-def instruct(single_item=False, cue=None, n_words=10, seed=None):
+def instruct(cue=None, single_item=False, n_words=10, seed=None):
     """Generate CAT stimuli.
 
-    single_item=True: sample one pair, put it into the instructions text,
-    and return a simple response_format {"word_1": ..., "word_2": ..., "word_user": "..."}.
-    single_item=False (default): sample n_words unique-word pairs and return
-    the multi-item format with "items" list + response_format of wordset_N.
+    Parameters
+    ----------
+    cue : list of (str, str) or list of dict, optional
+        Explicit word pairs to use. Each item may be a (word_1, word_2) tuple/list
+        or a dict with "word_1" / "word_2". If None, pairs are sampled from the
+        standard set.
+    single_item : bool, default False
+        If True, return a single pair embedded in the instruction text.
+    n_words : int, default 10
+        Number of pairs to sample when cue is None and single_item is False.
+    seed : int, optional
+        Random seed for reproducible sampling.
     """
     rng = random.Random(seed)
-    pairs = list(_load_pairs())
-    used = set()
-    items = []
-    target = 1 if single_item else n_words
-    while len(items) < target and pairs:
-        i = rng.randrange(len(pairs))
-        a, b = pairs.pop(i)
-        if a in used or b in used:
-            continue
-        used.add(a)
-        used.add(b)
-        if rng.choice([True, False]):
-            a, b = b, a
-        items.append({"id": len(items) + 1, "word_1": a, "word_2": b})
+
+    if cue is not None:
+        # Accept explicit pairs
+        items = []
+        for i, pair in enumerate(cue):
+            if isinstance(pair, dict):
+                a, b = pair["word_1"], pair["word_2"]
+            else:
+                a, b = pair[0], pair[1]
+            items.append({"id": i + 1, "word_1": a, "word_2": b})
+        if single_item and items:
+            items = items[:1]
+    else:
+        pairs = list(_load_pairs())
+        used = set()
+        items = []
+        target = 1 if single_item else n_words
+        while len(items) < target and pairs:
+            i = rng.randrange(len(pairs))
+            a, b = pairs.pop(i)
+            if a in used or b in used:
+                continue
+            used.add(a)
+            used.add(b)
+            if rng.choice([True, False]):
+                a, b = b, a
+            items.append({"id": len(items) + 1, "word_1": a, "word_2": b})
 
     if single_item and items:
         pair = items[0]
@@ -66,6 +88,8 @@ def instruct(single_item=False, cue=None, n_words=10, seed=None):
         )
         return {
             "test": "cat",
+            "cue": [(pair["word_1"], pair["word_2"])],
+            "n_words": 1,
             "instructions": instructions,
             "items": items,
             "response_format": {
@@ -77,6 +101,8 @@ def instruct(single_item=False, cue=None, n_words=10, seed=None):
 
     return {
         "test": "cat",
+        "cue": [(i["word_1"], i["word_2"]) for i in items],
+        "n_words": len(items),
         "instructions": INSTRUCTIONS,
         "items": items,
         "response_format": {

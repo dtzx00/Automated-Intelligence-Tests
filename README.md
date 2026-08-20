@@ -52,8 +52,8 @@ print(result["score"], result["n_valid"])
 ```
 
 `instruct()` returns a dict with `test`, `instructions`, `response_format`, and the test's own
-stimuli. `evaluate()` returns a dict with `score` (`None` if nothing scorable), `n_valid`, and
-per-test detail.
+stimuli (always including `cue` and `n_words` where applicable). `evaluate()` returns a dict with
+`score` (`None` if nothing scorable), `n_valid`, and per-test detail.
 
 ## API
 
@@ -67,18 +67,19 @@ ait.evaluate(test, responses, **kwargs)
 Sub-packages can also be used directly:
 `from automated_intelligence_tests.cat import instruct, evaluate`.
 
-| Test  | `instruct` arguments                       | `evaluate` arguments                     |
-|-------|--------------------------------------------|------------------------------------------|
-| `cat` | `single_item=False, n_words=10, seed=None` | `responses, model_key="glove-840b-300d"` |
-| `dat` | `n_words=10`                               | `responses, model_key=..., minimum=7`    |
-| `aut` | `cue=None, seed=None`                      | raises `NotImplementedError`             |
-| `cwt` | `cue=None, n_words=3, seed=None`           | raises `NotImplementedError`             |
+| Test  | `instruct` arguments                              | `evaluate` arguments                     |
+|-------|---------------------------------------------------|------------------------------------------|
+| `cat` | `cue=None, single_item=False, n_words=10, seed=None` | `responses, model_key="glove-840b-300d"` |
+| `dat` | `cue=None, n_words=10, seed=None`                 | `responses, model_key=..., minimum=7`    |
+| `aut` | `cue=None, n_words=None, seed=None`               | raises `NotImplementedError`             |
+| `cwt` | `cue=None, n_words=3, seed=None`                  | raises `NotImplementedError`             |
 
 **CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95, the
 instrument's difficulty control. No word repeats within an assessment. `single_item=True` returns
-one pair with the pair embedded in the instruction text, for one-call-per-item delivery.
+one pair with the pair embedded in the instruction text. Pass explicit pairs via `cue`.
 
-**DAT** takes either a list of words or a `{"word_1": ..., ...}` dict.
+**DAT** asks for `n_words` mutually distant words. Optional `cue` gives a starting word (placed in
+`word_1` of the response format).
 
 **AUT** samples a common object (brick, paperclip, …) unless one is given via `cue`.
 
