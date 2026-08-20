@@ -52,8 +52,8 @@ print(result["score"], result["n_valid"])
 ```
 
 `instruct()` returns a dict with `test`, `instructions`, `response_format`, and the test's own
-stimuli (always including `cue` and `n_words` where applicable). `evaluate()` returns a dict with
-`score` (`None` if nothing scorable), `n_valid`, and per-test detail.
+stimuli. `evaluate()` returns a dict with `score` (`None` if nothing scorable), `n_valid`, and
+per-test detail.
 
 ## API
 
@@ -74,16 +74,18 @@ Sub-packages can also be used directly:
 | `aut` | `cue=None, n_words=None, seed=None`               | raises `NotImplementedError`             |
 | `cwt` | `cue=None, n_words=3, seed=None`                  | raises `NotImplementedError`             |
 
-**CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95, the
-instrument's difficulty control. No word repeats within an assessment. `single_item=True` returns
-one pair with the pair embedded in the instruction text. Pass explicit pairs via `cue`.
+**CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95.
+`n_words` controls how many pairs are returned at once. Providing `cue=[(w1, w2), ...]` uses those
+explicit pairs (and a single pair automatically embeds it in the instruction text).
 
-**DAT** asks for `n_words` mutually distant words. Optional `cue` gives a starting word (placed in
-`word_1` of the response format).
+**DAT** asks for `n_words` words that are as different from each other as possible.
+Optional `cue` seeds the first word; the participant then supplies the remaining words.
 
-**AUT** samples a common object (brick, paperclip, …) unless one is given via `cue`.
+**AUT** samples (or accepts) a common object via `cue`. `n_words` is accepted for API consistency
+but currently unused.
 
-**CWT** samples one to three cue words (controlled by `n_words`) unless they are given via `cue`.
+**CWT** samples (or accepts via `cue`) 1–3 cue words controlled by `n_words` and asks for a short
+creative story that incorporates every cue word.
 
 ## Scoring
 

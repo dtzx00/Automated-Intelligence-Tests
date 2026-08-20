@@ -35,10 +35,12 @@ def instruct(cue=None, single_item=False, n_words=10, seed=None):
     ----------
     cue : list of (str, str) or list of dict, optional
         Explicit word pairs to use. Each item may be a (word_1, word_2) tuple/list
-        or a dict with "word_1" / "word_2". If None, pairs are sampled from the
-        standard set.
+        or a dict with "word_1" / "word_2". If provided, these pairs are used and
+        n_words is ignored. A single pair automatically uses the single-item
+        instruction format (pair embedded in the prompt).
     single_item : bool, default False
-        If True, return a single pair embedded in the instruction text.
+        If True (and cue is None), sample and return only one pair with the pair
+        embedded in the instruction text.
     n_words : int, default 10
         Number of pairs to sample when cue is None and single_item is False.
     seed : int, optional
@@ -47,7 +49,7 @@ def instruct(cue=None, single_item=False, n_words=10, seed=None):
     rng = random.Random(seed)
 
     if cue is not None:
-        # Accept explicit pairs
+        # Explicit pairs provided – override n_words
         items = []
         for i, pair in enumerate(cue):
             if isinstance(pair, dict):
@@ -55,8 +57,9 @@ def instruct(cue=None, single_item=False, n_words=10, seed=None):
             else:
                 a, b = pair[0], pair[1]
             items.append({"id": i + 1, "word_1": a, "word_2": b})
-        if single_item and items:
-            items = items[:1]
+        # One explicit pair → treat as single-item style
+        if len(items) == 1:
+            single_item = True
     else:
         pairs = list(_load_pairs())
         used = set()
