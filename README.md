@@ -59,7 +59,7 @@ per-test detail.
 
 ```python
 ait.list_available_tests()               # -> {short_name: long_name} for every test
-ait.instruct(test, **kwargs)             # test in {"cat", "dat", "aut", "wrt"}
+ait.instruct(test, **kwargs)             # test in {"cat", "dat", "aut", "cwt"}
 ait.call_test_instruction("DAT", **kwargs)   # same as instruct(), case-insensitive name
 ait.evaluate(test, responses, **kwargs)
 ```
@@ -103,7 +103,7 @@ Both use [`glove-word-embeddings`](https://pypi.org/project/glove-word-embedding
 automated_intelligence_tests/
     __init__.py          dispatcher: list_available_tests() / instruct() / evaluate()
     cat/  dat/           per test: instruct.py, evaluate.py, metadata.json,
-    aut/  wrt/                     readme.md, example.ipynb
+    aut/  cwt/                     readme.md, example.ipynb
     cat/data/cat_word_pairs_en.txt CAT word-pair list
 ```
 

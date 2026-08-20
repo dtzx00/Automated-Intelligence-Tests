@@ -1,7 +1,7 @@
 """AUT – Alternative Uses Task instruct."""
 import random
 
-AUT_OBJECTS = [
+CUE = [
     "brick", "paperclip", "bucket", "sock", "fork", "knife",
     "pencil", "pillow", "broom", "belt", "hat", "purse",
     "comb", "baseball", "candle", "clock", "lighter", "lamp",
@@ -20,12 +20,11 @@ TEMPLATE = (
     "Return the uses as a plain list (one per line). Do not return anything else."
 )
 
-def instruct(object=None, seed=None):
+def instruct(cue=None, seed=None):
     rng = random.Random(seed)
-    obj = object if object is not None else rng.choice(AUT_OBJECTS)
+    obj = object if object is not None else rng.choice(CUE)
     return {
         "test": "aut",
-        "object": obj,
+        "cue": cue,
         "instructions": TEMPLATE.format(object=obj),
-        "response_format": {"object": obj, "uses": ["use 1", "use 2", "..."]},
-    }
+        "response_format": {"cue": cue, "responses": ["use 1", "use 2", "..."]}}

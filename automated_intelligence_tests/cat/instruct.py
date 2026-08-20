@@ -25,7 +25,7 @@ def _load_pairs():
                 pairs.append((a.strip(), b.strip()))
     return pairs
 
-def instruct(single_item=False, n_items=10, seed=None):
+def instruct(single_item=False, n_words=10, seed=None):
     """Generate CAT stimuli.
 
     single_item=True: sample one pair, put it into the instructions text,
