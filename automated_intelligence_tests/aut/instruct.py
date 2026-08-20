@@ -4,8 +4,7 @@ import random
 CUE = [
     "brick", "paperclip", "bucket", "sock", "fork", "knife",
     "pencil", "pillow", "broom", "belt", "hat", "purse",
-    "comb", "baseball", "candle", "clock", "lighter", "lamp",
-]
+    "comb", "baseball", "candle", "clock", "lighter", "lamp"]
 
 TEMPLATE = (
     "What are some creative uses for this object: {cue}?\n\n"
@@ -17,8 +16,7 @@ TEMPLATE = (
     "3. Return only the list of uses, nothing else.\n"
     "4. Do not return any thought process or explanations other than the list of uses.\n\n"
     "Notes:\n"
-    "Return the uses as a plain list (one per line). Do not return anything else."
-)
+    "Return the uses as a plain list (one per line). Do not return anything else.")
 
 
 def instruct(cue=None, seed=None):
