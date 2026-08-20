@@ -8,7 +8,7 @@ CUE = [
 ]
 
 TEMPLATE = (
-    "What are some creative uses for this object: {object}?\n\n"
+    "What are some creative uses for this object: {cue}?\n\n"
     "The goal is to come up with creative uses, which are ideas that may strike "
     "as clever, unusual, interesting, uncommon, humorous, innovative, or different.\n\n"
     "Rules:\n"
@@ -20,11 +20,23 @@ TEMPLATE = (
     "Return the uses as a plain list (one per line). Do not return anything else."
 )
 
+
 def instruct(cue=None, seed=None):
+    """Return instructions for the Alternative Uses Task (AUT).
+
+    Parameters
+    ----------
+    cue : str, optional
+        The object to generate uses for. If None, sample from the standard set.
+    seed : int, optional
+        Random seed for reproducible sampling of the cue.
+    """
     rng = random.Random(seed)
-    obj = object if object is not None else rng.choice(CUE)
+    if cue is None:
+        cue = rng.choice(CUE)
     return {
         "test": "aut",
         "cue": cue,
-        "instructions": TEMPLATE.format(object=obj),
-        "response_format": {"cue": cue, "responses": ["use 1", "use 2", "..."]}}
+        "instructions": TEMPLATE.format(cue=cue),
+        "response_format": {"cue": cue, "responses": ["use 1", "use 2", "..."]},
+    }

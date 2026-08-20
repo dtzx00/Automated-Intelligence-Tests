@@ -38,7 +38,7 @@ import automated_intelligence_tests as ait
 ait.list_available_tests()        # {"CAT": "Convergent Association Task", ...}
 
 # 1. Build the stimuli and prompt
-task = ait.instruct("cat", n_items=10, seed=42)
+task = ait.instruct("cat", n_words=10, seed=42)
 print(task["instructions"])       # give this to a person or a model
 print(task["response_format"])    # the shape the answer should come back in
 
@@ -69,10 +69,10 @@ Sub-packages can also be used directly:
 
 | Test  | `instruct` arguments                       | `evaluate` arguments                     |
 |-------|--------------------------------------------|------------------------------------------|
-| `cat` | `single_item=False, n_items=10, seed=None` | `responses, model_key="glove-840b-300d"` |
+| `cat` | `single_item=False, n_words=10, seed=None` | `responses, model_key="glove-840b-300d"` |
 | `dat` | `n_words=10`                               | `responses, model_key=..., minimum=7`    |
-| `aut` | `object=None, seed=None`                   | raises `NotImplementedError`             |
-| `cwt` | `cues=None, n_words=3, seed=None`          | raises `NotImplementedError`             |
+| `aut` | `cue=None, seed=None`                      | raises `NotImplementedError`             |
+| `cwt` | `cue=None, n_words=3, seed=None`           | raises `NotImplementedError`             |
 
 **CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95, the
 instrument's difficulty control. No word repeats within an assessment. `single_item=True` returns
@@ -80,9 +80,9 @@ one pair with the pair embedded in the instruction text, for one-call-per-item d
 
 **DAT** takes either a list of words or a `{"word_1": ..., ...}` dict.
 
-**AUT** samples a common object (brick, paperclip, …) unless one is given.
+**AUT** samples a common object (brick, paperclip, …) unless one is given via `cue`.
 
-**CWT** samples one to three cue words unless they are given.
+**CWT** samples one to three cue words (controlled by `n_words`) unless they are given via `cue`.
 
 ## Scoring
 

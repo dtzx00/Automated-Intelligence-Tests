@@ -15,6 +15,7 @@ INSTRUCTIONS = (
     "Return only that single word for each pair. Do not return anything else."
 )
 
+
 def _load_pairs():
     pairs = []
     with open(PAIRS_FILE, encoding="utf-8") as f:
@@ -25,19 +26,20 @@ def _load_pairs():
                 pairs.append((a.strip(), b.strip()))
     return pairs
 
+
 def instruct(single_item=False, n_words=10, seed=None):
     """Generate CAT stimuli.
 
     single_item=True: sample one pair, put it into the instructions text,
     and return a simple response_format {"word_1": ..., "word_2": ..., "word_user": "..."}.
-    single_item=False (default): sample n_items unique-word pairs and return
+    single_item=False (default): sample n_words unique-word pairs and return
     the multi-item format with "items" list + response_format of wordset_N.
     """
     rng = random.Random(seed)
     pairs = list(_load_pairs())
     used = set()
     items = []
-    target = 1 if single_item else n_items
+    target = 1 if single_item else n_words
     while len(items) < target and pairs:
         i = rng.randrange(len(pairs))
         a, b = pairs.pop(i)

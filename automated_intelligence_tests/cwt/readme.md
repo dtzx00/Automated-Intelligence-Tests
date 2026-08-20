@@ -1,10 +1,10 @@
 # CWT – Creative Writing Task
 
-`instruct(cues=None, n_words=3, seed=None)` returns instructions for writing a short creative story that must include the provided cue word(s).
+`instruct(cue=None, n_words=3, seed=None)` returns instructions for writing a short creative story that must include the provided cue word(s).
 
-- If `cues` is omitted, a set of `n_words` (must be 1, 2 or 3) cues is sampled from the standard sets.
+- If `cue` is omitted, a set of `n_words` (must be 1, 2 or 3) cues is sampled from the standard sets.
 - The cue sets are taken from the divergent semantic integration (DSI) studies of Johnson et al. (2023).
-- The returned dict always includes the chosen `cues` (and `n_words`) so evaluation has full context.
+- The returned dict always includes the chosen `cue` (and `n_words`) so evaluation has full context.
 - `evaluate` is currently a placeholder (scoring not yet implemented; a future implementation could use DSI / BERT-based metrics from the same paper).
 
 ### Source

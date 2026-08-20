@@ -8,7 +8,8 @@ WRITING_CUES_3_WORD = [
     ["organ", "empire", "comply"],
     ["statement", "stealth", "detect"],
     ["gloom", "payment", "exist"],
-    ["year", "week", "embark"]]
+    ["year", "week", "embark"],
+]
 
 WRITING_CUES_2_WORD = [
     ["stamp", "letter"],
@@ -34,7 +35,8 @@ WRITING_CUES_2_WORD = [
     ["sky", "glow"],
     ["death", "frame"],
     ["enemy", "death"],
-    ["superpower", "glow"]]
+    ["superpower", "glow"],
+]
 
 WRITING_CUES_1_WORD = [
     ["frame"],
@@ -51,7 +53,8 @@ WRITING_CUES_1_WORD = [
     ["simplicity"],
     ["superpower"],
     ["2305"],
-    ["Execution"]]
+    ["Execution"],
+]
 
 CUES_BY_N = {
     1: WRITING_CUES_1_WORD,
@@ -61,13 +64,15 @@ CUES_BY_N = {
 
 TEMPLATE = (
     "Write a short creative story of about five to six sentences "
-    "that includes all of these word(s): {cues}.\n\n"
+    "that includes all of these word(s): {cue}.\n\n"
     "Rules:\n"
     "1. Use your imagination and be creative.\n"
     "2. Include every cue word at least once.\n"
     "3. Aim for five to six sentences.\n\n"
     "Notes:\n"
-    "Return only the story text itself. Do not include a title, headings, or any commentary.")
+    "Return only the story text itself. Do not include a title, headings, or any commentary."
+)
+
 
 def instruct(cue=None, n_words=3, seed=None):
     """Return instructions for the Creative Writing Task (CWT).
@@ -78,7 +83,7 @@ def instruct(cue=None, n_words=3, seed=None):
         Explicit cue words to use. If None, sample from the standard set.
     n_words : int, default 3
         Number of cue words to sample when `cue` is None. Must be 1, 2 or 3.
-        Ignored when `cues` is provided.
+        Ignored when `cue` is provided.
     seed : int, optional
         Random seed for reproducible sampling of cues.
     """
@@ -91,7 +96,8 @@ def instruct(cue=None, n_words=3, seed=None):
         cue = list(cue)
     return {
         "test": "cwt",
-        "cues": cues,
+        "cue": cue,
         "n_words": len(cue),
         "instructions": TEMPLATE.format(cue=", ".join(cue)),
-        "response_format": {"cues": cue, "story": "..."},}
+        "response_format": {"cue": cue, "story": "..."},
+    }
