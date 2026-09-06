@@ -18,7 +18,7 @@ from .cwt.instruct import instruct as cwt_instruct
 from .cwt.evaluate import evaluate as cwt_evaluate
 
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 
 def list_available_tests() -> dict:
