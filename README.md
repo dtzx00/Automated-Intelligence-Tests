@@ -4,12 +4,12 @@ Minimal Python package providing automated tests of associative and creative abi
 human and artificial intelligence. Each test exposes the same two calls: `instruct()` builds the
 stimuli and prompt, `evaluate()` scores the responses.
 
-| Test  | Name                        | `instruct` | `evaluate`                        |
-|-------|-----------------------------|------------|-----------------------------------|
-| `cat` | Convergent Association Task | yes        | Semantic proximity score (GloVe)  |
-| `dat` | Divergent Association Task  | yes        | Semantic distance score (GloVe)   |
-| `aut` | Alternative Uses Task       | yes        | not implemented yet               |
-| `cwt` | Creative Writing Task       | yes        | not implemented yet               |
+| Test  | Name                        | `instruct` | `evaluate`                                   |
+|-------|-----------------------------|------------|----------------------------------------------|
+| `cat` | Convergent Association Task | yes        | Semantic proximity score (Wang et al., WIP)  |
+| `dat` | Divergent Association Task  | yes        | Semantic distance score (Olson et al., 2021) |
+| `aut` | Alternative Uses Task       | yes        | SemDis originality (Beaty & Johnson, 2021)   |
+| `cwt` | Creative Writing Task       | yes        | not implemented yet                          |
 
 ## Install
 
@@ -67,38 +67,28 @@ ait.evaluate(test, responses, **kwargs)
 Sub-packages can also be used directly:
 `from automated_intelligence_tests.cat import instruct, evaluate`.
 
-| Test  | `instruct` arguments                              | `evaluate` arguments                     |
-|-------|---------------------------------------------------|------------------------------------------|
+| Test  | `instruct` arguments                                 | `evaluate` arguments                     |
+|-------|------------------------------------------------------|------------------------------------------|
 | `cat` | `cue=None, single_item=False, n_words=10, seed=None` | `responses, model_key="glove-840b-300d"` |
-| `dat` | `cue=None, n_words=10, seed=None`                 | `responses, model_key=..., minimum=7`    |
-| `aut` | `cue=None, n_words=None, seed=None`               | raises `NotImplementedError`             |
-| `cwt` | `cue=None, n_words=3, seed=None`                  | raises `NotImplementedError`             |
+| `dat` | `cue=None, n_words=10, seed=None`                    | `responses, model_key=..., minimum=7`    |
+| `aut` | `cue=None, n_words=None, seed=None`                  | `responses, model_keys=None`             |
+| `cwt` | `cue=None, n_words=3, seed=None`                     | raises `NotImplementedError`             |
 
-**CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95.
-`n_words` controls how many pairs are returned at once. Providing `cue=[(w1, w2), ...]` uses those
-explicit pairs (and a single pair automatically embeds it in the instruction text).
+**CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95. `n_words` controls how many pairs are returned at once. Providing `cue=[(w1, w2), ...]` uses those explicit pairs (and a single pair automatically embeds it in the instruction text).
 
-**DAT** asks for `n_words` words that are as different from each other as possible.
-Optional `cue` seeds the first word; the participant then supplies the remaining words.
+**DAT** asks for `n_words` words that are as different from each other as possible. Optional `cue` seeds the first word; the participant then supplies the remaining words.
 
-**AUT** samples (or accepts) a common object via `cue`. `n_words` is accepted for API consistency
-but currently unused.
+**AUT** samples (or accepts) a common object via `cue`. `n_words` is accepted for API consistency but currently unused.
 
-**CWT** samples (or accepts via `cue`) 1–3 cue words controlled by `n_words` and asks for a short
-creative story that incorporates every cue word.
+**CWT** samples (or accepts via `cue`) 1–3 cue words controlled by `n_words` and asks for a short creative story that incorporates every cue word.
 
 ## Scoring
 
-- **CAT** — mean cosine *similarity* between the participant's word and each of the two cue words,
-  averaged over items. Higher = stronger convergent association. Invalid or unembeddable words are
-  marked `valid: False` and excluded rather than penalised.
-- **DAT** — Olson's procedure exactly: mean pairwise cosine *distance* of the first 7 unique valid
-  words, ×100. Returns `score: None` if fewer than 7 valid words are given.
+- **CAT** — mean cosine *similarity* between the participant's word and each of the two cue words, averaged over items. Higher = stronger convergent association. Invalid or unembeddable words are marked `valid: False` and excluded rather than penalised.
+- **DAT** — Olson's procedure exactly: mean pairwise cosine *distance* of the first 7 unique valid words, ×100. Returns `score: None` if fewer than 7 valid words are given.
+- **AUT** — Beaty & Johnson SemDis: clean each use (`how="heavy"` stopwords, drop cue + plural), multiply leftover word vectors, take `1 − cosine` to the cue in five spaces (`cbow-subs-300d`, `cbow-ukwac-subs-300d`, `cbow-baroni-400d`, `tasa-lsa-300d`, `glove-6b-300d`). `score` is the mean of those spaces, then the mean across uses. Higher = more original. First call downloads the five spaces into `~/.cache/glove-word-embeddings`.
 
-Both use [`glove-word-embeddings`](https://pypi.org/project/glove-word-embeddings/), default model
-`glove-840b-300d`. The first `evaluate()` call downloads the embedding file and caches it under
-`~/.cache/glove-word-embeddings`; later calls are offline. Other keys (`glove-6b-300d`,
-`wiki-news-300d-1m`, the `flair-olson-*` set, …) can be passed via `model_key`.
+All will use [`glove-word-embeddings`](https://pypi.org/project/glove-word-embeddings/), default model `glove-840b-300d` for CAT and DAT. The first `evaluate()` call downloads the embedding file and caches it under `~/.cache/glove-word-embeddings`; later calls are offline. Other keys (`glove-6b-300d`, `wiki-news-300d-1m`, the `flair-olson-*` set, …) can be passed via `model_key`.
 
 ## Layout
 

@@ -1,5 +1,5 @@
 {
   "short_name": "AUT",
   "long_name": "Alternative Uses Task",
-  "description": "Classic divergent-thinking task in which participants list creative alternative uses for a common object (e.g., a brick or paperclip). instruct() is implemented; evaluate() is currently a placeholder."
+  "description": "Classic divergent-thinking task: list creative uses for a common object. evaluate() scores SemDis originality (Beaty & Johnson, 2021) as the mean of five multiplicative semantic-distance spaces."
 }
