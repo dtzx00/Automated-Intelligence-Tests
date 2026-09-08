@@ -5,7 +5,8 @@ CUE_POOL = [
     "brick", "paperclip", "bucket", "sock", "fork", "knife",
     "pencil", "pillow", "broom", "belt", "hat", "purse",
     "comb", "baseball", "candle", "clock", "lighter", "lamp",
-]
+    'wooden slat', 'light bulb', 'book', 'spoon', 'box', 'pen',
+    'rope', 'car tires', 'towel', 'tin can']
 
 TEMPLATE = (
     "What are some creative uses for this object: {cue}?\n\n"
