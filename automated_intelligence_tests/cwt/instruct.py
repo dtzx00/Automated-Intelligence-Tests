@@ -92,8 +92,10 @@ def instruct(cue=None, n_words=3, seed=None):
     rng = random.Random(seed)
     if cue is None:
         cue = list(rng.choice(CUES_BY_N[n_words]))
+    elif isinstance(cue, str):
+        cue = [w.strip() for w in cue.replace(",", " ").split() if w.strip()]
     else:
-        cue = list(cue)
+        cue = [str(w).strip() for w in cue if str(w).strip()]
     return {
         "test": "cwt",
         "cue": cue,
