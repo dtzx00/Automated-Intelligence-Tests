@@ -73,10 +73,8 @@ TEMPLATE = (
     "Return only the story text itself. Do not include a title, headings, or any commentary."
 )
 
-
 def instruct(cue=None, n_words=3, seed=None):
     """Return instructions for the Creative Writing Task (CWT).
-
     Parameters
     ----------
     cue : list of str, optional
