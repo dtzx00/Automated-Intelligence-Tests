@@ -22,7 +22,7 @@ def _word_index(key):
     m = re.search(r"(\d+)", str(key))
     return int(m.group(1)) if m else 0
 
-def evaluate(responses, model_key="glove-840b-300d", minimum=7):
+def evaluate(responses, model_key="glove-olson-validated", minimum=7):
     """responses: list of words or dict {word_1: w, ...}."""
     if isinstance(responses, dict):
         keys = sorted(responses, key=_word_index)
