@@ -53,14 +53,14 @@ ait.evaluate(test, responses, **kwargs)      # evaluate the scores using parsed 
 ```
 
 Sub-packages can also be used directly:
-`from automated_intelligence_tests.cat import instruct, evaluate`.
+`from automated_intelligence_tests.cat import instruct, parse, evaluate`.
 
-| Test  | `instruct` arguments                                 | `evaluate` arguments                     |
-|-------|------------------------------------------------------|------------------------------------------|
-| `cat` | `cue=None, single_item=False, n_words=10, seed=None` | `responses, model_key="glove-840b-300d"` |
-| `dat` | `cue=None, n_words=10, seed=None`                    | `responses, model_key=..., minimum=7`    |
-| `aut` | `cue=None, n_words=None, seed=None`                  | `responses, model_keys=None`             |
-| `cwt` | `cue=None, n_words=3, seed=None`                     | `responses, model_key="bert-large"`      |
+| Test  | `instruct` arguments                                 | `parse` arguments                          | `evaluate` arguments                     |
+| ----- | ---------------------------------------------------- | ------------------------------------------ | ---------------------------------------- |
+| `cat` | `cue=None, single_item=False, n_words=10, seed=None` | not implemented                            | `responses, model_key="glove-840b-300d"` |
+| `dat` | `cue=None, n_words=10, seed=None`                    | `raw, cue=None, n_words=10, stim=None`     | `responses, model_key=..., minimum=7`    |
+| `aut` | `cue=None, n_words=None, seed=None`                  | `raw, cue=None, n_words=None, stim=None`   | `responses, model_keys=None`             |
+| `cwt` | `cue=None, n_words=3, seed=None`                     | `raw, cue=None, n_words=None, stim=None`   | `responses, model_key="bert-large"`      |
 
 **CAT** samples word pairs from a fixed list of 8,069 English word pairs at cosine distance 0.85–0.95. `n_words` controls how many pairs are returned at once. Providing `cue=[(w1, w2), ...]` uses those explicit pairs (and a single pair automatically embeds it in the instruction text).
 
