@@ -1,8 +1,6 @@
 # Automated Intelligence Tests
 
-Minimal Python package providing automated tests of associative and creative ability, for both
-human and artificial intelligence. Each test exposes the same two calls: `instruct()` builds the
-stimuli and prompt, `evaluate()` scores the responses.
+Minimal Python package providing automated tests of associative and creative ability, for both human and artificial intelligence. Each test exposes the same three calls: `instruct()` builds the stimuli and prompt, `parse()` will do some simple automated parsing to fit the format of the scoring `evaluate()` function, and `evaluate()` scores the responses.
 
 | Test  | Name                        | `instruct` | `evaluate`                                   |
 |-------|-----------------------------|------------|----------------------------------------------|
