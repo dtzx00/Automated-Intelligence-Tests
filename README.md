@@ -34,21 +34,10 @@ pip install -e .
 
 ```python
 import automated_intelligence_tests as ait
-
-ait.list_available_tests()        # {"CAT": "Convergent Association Task", ...}
-
-# 1. Build the stimuli and prompt
-task = ait.instruct("cat", n_words=10, seed=42)
-print(task["instructions"])       # give this to a person or a model
-print(task["response_format"])    # the shape the answer should come back in
-
-# 2. Fill in "word_user" for each item, then score
-responses = {
-    "wordset_1": {"word_1": "television", "word_2": "lake", "word_user": "reflection"},
-    # ...
-}
-result = ait.evaluate("cat", responses)
-print(result["score"], result["n_valid"])
+ait.list_available_tests()
+stim = ait.instruct("aut", cue="brick")
+parsed = ait.parse("aut", raw, stim=stim)
+result = ait.evaluate("aut", parsed)
 ```
 
 `instruct()` returns a dict with `test`, `instructions`, `response_format`, and the test's own
@@ -58,10 +47,11 @@ per-test detail.
 ## API
 
 ```python
-ait.list_available_tests()               # -> {short_name: long_name} for every test
-ait.instruct(test, **kwargs)             # test in {"cat", "dat", "aut", "cwt"}
+ait.list_available_tests()                   # short_name and long_name for every test
+ait.instruct(test, **kwargs)                 # test in {"cat", "dat", "aut", "cwt"}
 ait.call_test_instruction("DAT", **kwargs)   # same as instruct(), case-insensitive name
-ait.evaluate(test, responses, **kwargs)
+ait.parse("aut", **kwargs)                   # some basic automated parsing
+ait.evaluate(test, responses, **kwargs)      # evaluate the scores using parsed response        
 ```
 
 Sub-packages can also be used directly:
