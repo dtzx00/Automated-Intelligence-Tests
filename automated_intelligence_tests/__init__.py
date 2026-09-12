@@ -89,4 +89,5 @@ def parse(test: str, raw, stim=None, **kwargs):
     if test == "cwt":
         return cwt_parse(raw, stim=stim, **kwargs)
     raise ValueError(
-        f"Unknown test: {test}. Use 'dat', 'aut' or 'cwt'.")
+        f"Unknown test: {test}. Use 'cat', 'dat', 'aut' or 'cwt'. "
+        "Call list_available_tests() to see details.")
