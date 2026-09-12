@@ -10,12 +10,22 @@ from pathlib import Path
 
 from .cat.instruct import instruct as cat_instruct
 from .cat.evaluate import evaluate as cat_evaluate
+
 from .dat.instruct import instruct as dat_instruct
+from .dat.parse import parse as dat_parse
 from .dat.evaluate import evaluate as dat_evaluate
+
 from .aut.instruct import instruct as aut_instruct
+from .aut.parse import parse as aut_parse
 from .aut.evaluate import evaluate as aut_evaluate
+
 from .cwt.instruct import instruct as cwt_instruct
+from .cwt.parse import parse as cwt_parse
 from .cwt.evaluate import evaluate as cwt_evaluate
+
+
+
+
 
 
 __version__ = "0.1.8"
