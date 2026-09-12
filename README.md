@@ -83,8 +83,8 @@ All will use [`glove-word-embeddings`](https://pypi.org/project/glove-word-embed
 
 ```
 automated_intelligence_tests/
-    __init__.py          dispatcher: list_available_tests() / instruct() / evaluate()
-    cat/  dat/           per test: instruct.py, evaluate.py, metadata.json,
+    __init__.py          dispatcher: list_available_tests() / instruct() / parse() / evaluate()
+    cat/  dat/           per test: instruct.py, parse.py, evaluate.py, metadata.json,
     aut/  cwt/                     readme.md, example.ipynb
     cat/data/cat_word_pairs_en.txt CAT word-pair list
 ```
