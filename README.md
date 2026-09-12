@@ -48,7 +48,7 @@ per-test detail.
 ait.list_available_tests()                   # short_name and long_name for every test
 ait.instruct(test, **kwargs)                 # test in {"cat", "dat", "aut", "cwt"}
 ait.call_test_instruction("DAT", **kwargs)   # same as instruct(), case-insensitive name
-ait.parse("aut", **kwargs)                   # some basic automated parsing
+ait.parse(test, raw, stim=None)              # some basic automated parsing
 ait.evaluate(test, responses, **kwargs)      # evaluate the scores using parsed response        
 ```
 
