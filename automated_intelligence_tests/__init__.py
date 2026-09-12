@@ -24,11 +24,7 @@ from .cwt.parse import parse as cwt_parse
 from .cwt.evaluate import evaluate as cwt_evaluate
 
 
-
-
-
-
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 
 
 def list_available_tests() -> dict:
