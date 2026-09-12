@@ -77,3 +77,16 @@ def evaluate(test: str, responses, **kwargs):
     raise ValueError(
         f"Unknown test: {test}. Use 'cat', 'dat', 'aut' or 'cwt'. "
         "Call list_available_tests() to see details.")
+
+def parse(test: str, raw, stim=None, **kwargs):
+    test = (test or "").strip().lower()
+    if test == "cat":
+        raise NotImplementedError("parse() is not implemented for CAT yet.")
+    if test == "dat":
+        return dat_parse(raw, stim=stim, **kwargs)
+    if test == "aut":
+        return aut_parse(raw, stim=stim, **kwargs)
+    if test == "cwt":
+        return cwt_parse(raw, stim=stim, **kwargs)
+    raise ValueError(
+        f"Unknown test: {test}. Use 'dat', 'aut' or 'cwt'.")
