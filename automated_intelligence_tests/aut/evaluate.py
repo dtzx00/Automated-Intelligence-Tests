@@ -20,28 +20,33 @@ def _cosine_dist(v1, v2):
     return 1.0 - float(np.dot(v1, v2) / (n1 * n2))
 
 
-def _tokens(use, cue):
-    text = pre.strip_marks(str(use)).lower()
+def _words(text):
+    text = pre.strip_marks(str(text)).lower()
     text = re.sub(r"\d+", " ", text)
-    tokens = pre.remove_stopwords(text, how="heavy")
-    cue = str(cue).lower().strip()
-    drop = {cue, cue + "s"}
-    return [w for w in tokens if w not in drop]
+    return pre.remove_stopwords(text, how="heavy")
+
+
+def _tokens(use, cue):
+    drop = set()
+    for w in _words(cue):
+        drop.update((w, w + "s"))
+    return [w for w in _words(use) if w not in drop]
+
+
+def _compose(tokens, model):
+    vecs = [model.embed_exact(w) for w in tokens]
+    vecs = [v for v in vecs if v is not None]
+    if not vecs:
+        return None
+    out = vecs[0]
+    for v in vecs[1:]:
+        out = out * v
+    return out
 
 
 def _score_use_in_space(tokens, cue, model):
-    vecs = []
-    for w in tokens:
-        v = model.embed_exact(w)
-        if v is not None:
-            vecs.append(v)
-    if not vecs:
-        return None
-    use_vec = vecs[0]
-    for v in vecs[1:]:
-        use_vec = use_vec * v
-    v_cue = model.embed_exact(str(cue).lower().strip())
-    return _cosine_dist(v_cue, use_vec)
+    return _cosine_dist(_compose(_words(cue), model),
+                        _compose(tokens, model))
 
 
 def evaluate(responses, model_keys=None):
