@@ -12,5 +12,6 @@ The story is split into sentences. BERT-large reads each sentence and keeps laye
 
 Returns `score`, `n_valid` (list size), `n_sentences`, `n_pairs`, `cue`, and `model`. First call downloads BERT into `~/.cache/glove-word-embeddings/huggingface`.
 
-### Source
-Johnson, D. R., Kaufman, J. C., Baker, B. S., Patterson, J. D., Barbot, B., Green, A. E., van Hell, J., Kennedy, E., Sullivan, G. F., Taylor, C. L., Ward, T., & Beaty, R. E. (2023). Divergent semantic integration (DSI): Extracting creativity from narratives with distributional semantic modeling. *Behavior Research Methods, 55*(7), 3726–3759. https://doi.org/10.3758/s13428-022-01986-2
+### Citations
+
+`Johnson, D. R., Kaufman, J. C., Baker, B. S., Patterson, J. D., Barbot, B., Green, A. E., van Hell, J., Kennedy, E., Sullivan, G. F., Taylor, C. L., Ward, T., & Beaty, R. E. (2023). Divergent semantic integration (DSI): Extracting creativity from narratives with distributional semantic modeling. *Behavior Research Methods, 55*(7), 3726–3759. https://doi.org/10.3758/s13428-022-01986-2`
