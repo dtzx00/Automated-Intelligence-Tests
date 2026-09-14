@@ -14,3 +14,7 @@ Each use is cleaned (lowercase, strip punctuation and numbers, drop `how="heavy"
 - `glove-6b-300d`
 
 The returned `score` is the mean of those five distances, then the mean across uses. `models` is each space on its own. `details` is one row per use. Higher = more original. This follows Beaty & Johnson (2021). First call downloads the five spaces into `~/.cache/glove-word-embeddings`.
+
+### Citations
+
+`Beaty, R. E., & Johnson, D. R. (2021). Automating creativity assessment with SemDis: An open platform for computing semantic distance. Behavior Research Methods, 53(2), 757–780. https://doi.org/10.3758/s13428-020-01453-w`
